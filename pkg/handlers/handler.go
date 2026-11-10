@@ -15,6 +15,8 @@ type TaskService interface {
 	EditTask(ctx context.Context, id, date, title, comment, repeat string) error
 	DeleteTask(ctx context.Context, id string) error
 	EditTaskStatus(ctx context.Context, id string) error
+	GetHistory(ctx context.Context, page int) ([]model.TaskChange, error)
+	UndoLast(ctx context.Context) error
 }
 
 // AuthService описывает проверку пароля и токена для HTTP-запросов.

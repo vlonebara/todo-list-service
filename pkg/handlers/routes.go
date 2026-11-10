@@ -4,6 +4,12 @@ import "net/http"
 
 // registerRoutes связывает маршруты API с обработчиками и middleware.
 func (h Handler) registerRoutes(mux *http.ServeMux) {
+	mux.HandleFunc("/api/history", methods(map[string]http.HandlerFunc{
+		http.MethodGet: auth(h.authentication, h.getHistoryHandler),
+	}))
+	mux.HandleFunc("/api/task/undo", methods(map[string]http.HandlerFunc{
+		http.MethodPost: auth(h.authentication, h.undoTaskHandler),
+	}))
 	mux.HandleFunc("/api/nextdate", methods(map[string]http.HandlerFunc{
 		http.MethodGet: nextDayHandler,
 	}))

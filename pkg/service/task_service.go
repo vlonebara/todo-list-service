@@ -15,7 +15,9 @@ type TaskStore interface {
 	List(ctx context.Context, filter model.TaskFilter) ([]model.Task, error)
 	Update(ctx context.Context, task model.Task) error
 	Delete(ctx context.Context, id int64) error
-	SetDate(ctx context.Context, id int64, date string) error
+	Complete(ctx context.Context, original model.Task, date string) error
+	History(ctx context.Context, offset int) ([]model.TaskChange, error)
+	Undo(ctx context.Context) error
 }
 
 // TaskService проверяет данные задач и обращается к общему хранилищу.

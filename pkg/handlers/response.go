@@ -20,6 +20,10 @@ func writeTaskError(w http.ResponseWriter, err error) {
 		writeAPIError(w, http.StatusBadRequest, err.Error())
 	case errors.Is(err, model.ErrTaskNotFound):
 		writeAPIError(w, http.StatusNotFound, "task not found")
+	case errors.Is(err, model.ErrHistoryEmpty):
+		writeAPIError(w, http.StatusNotFound, "history is empty")
+	case errors.Is(err, model.ErrConflict):
+		writeAPIError(w, http.StatusConflict, err.Error())
 	default:
 		log.Printf("task request: %v", err)
 		writeAPIError(w, http.StatusInternalServerError, "internal server error")

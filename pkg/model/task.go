@@ -14,3 +14,13 @@ type TaskFilter struct {
 	Text string
 	Date string
 }
+
+// TaskChange хранит состояние задачи до и после действия.
+type TaskChange struct {
+	ID        int64
+	Action    string
+	Before    *Task
+	After     *Task
+	CreatedAt string
+	Undone    bool
+}
