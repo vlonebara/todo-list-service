@@ -1,6 +1,7 @@
 package db
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -19,8 +20,8 @@ func NewTaskStore(database *sql.DB) TaskStore {
 }
 
 // Add сохраняет задачу и возвращает её ID.
-func (s TaskStore) Add(task model.Task) (int64, error) {
-	result, err := s.db.Exec(
+func (s TaskStore) Add(ctx context.Context, task model.Task) (int64, error) {
+	result, err := s.db.ExecContext(ctx,
 		`INSERT INTO scheduler (date, title, comment, repeat) VALUES (?, ?, ?, ?)`,
 		task.Date, task.Title, task.Comment, task.Repeat,
 	)
@@ -35,9 +36,9 @@ func (s TaskStore) Add(task model.Task) (int64, error) {
 }
 
 // Get возвращает задачу с указанным ID.
-func (s TaskStore) Get(id int64) (model.Task, error) {
+func (s TaskStore) Get(ctx context.Context, id int64) (model.Task, error) {
 	var task model.Task
-	err := s.db.QueryRow(
+	err := s.db.QueryRowContext(ctx,
 		`SELECT id, date, title, comment, repeat FROM scheduler WHERE id = ?`, id,
 	).Scan(&task.ID, &task.Date, &task.Title, &task.Comment, &task.Repeat)
 	if errors.Is(err, sql.ErrNoRows) {
@@ -50,8 +51,8 @@ func (s TaskStore) Get(id int64) (model.Task, error) {
 }
 
 // Update сохраняет новые значения полей задачи.
-func (s TaskStore) Update(task model.Task) error {
-	result, err := s.db.Exec(
+func (s TaskStore) Update(ctx context.Context, task model.Task) error {
+	result, err := s.db.ExecContext(ctx,
 		`UPDATE scheduler SET date = ?, title = ?, comment = ?, repeat = ? WHERE id = ?`,
 		task.Date, task.Title, task.Comment, task.Repeat, task.ID,
 	)
@@ -62,8 +63,8 @@ func (s TaskStore) Update(task model.Task) error {
 }
 
 // Delete удаляет задачу с указанным ID.
-func (s TaskStore) Delete(id int64) error {
-	result, err := s.db.Exec(`DELETE FROM scheduler WHERE id = ?`, id)
+func (s TaskStore) Delete(ctx context.Context, id int64) error {
+	result, err := s.db.ExecContext(ctx, `DELETE FROM scheduler WHERE id = ?`, id)
 	if err != nil {
 		return fmt.Errorf("delete task: %w", err)
 	}
@@ -71,8 +72,8 @@ func (s TaskStore) Delete(id int64) error {
 }
 
 // SetDate записывает дату следующего выполнения задачи.
-func (s TaskStore) SetDate(id int64, date string) error {
-	result, err := s.db.Exec(`UPDATE scheduler SET date = ? WHERE id = ?`, date, id)
+func (s TaskStore) SetDate(ctx context.Context, id int64, date string) error {
+	result, err := s.db.ExecContext(ctx, `UPDATE scheduler SET date = ? WHERE id = ?`, date, id)
 	if err != nil {
 		return fmt.Errorf("update task date: %w", err)
 	}

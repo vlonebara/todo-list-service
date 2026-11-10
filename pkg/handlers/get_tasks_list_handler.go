@@ -8,7 +8,7 @@ type getTasksListResponse struct {
 
 // getTasksListHandler возвращает ближайшие задачи, отсортированные по дате.
 func (h Handler) getTasksListHandler(w http.ResponseWriter, r *http.Request) {
-	tasks, err := h.tasks.GetTasksList(r.URL.Query().Get("search"))
+	tasks, err := h.tasks.GetTasksList(r.Context(), r.URL.Query().Get("search"))
 	if err != nil {
 		writeTaskError(w, err)
 		return

@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"time"
@@ -9,13 +10,13 @@ import (
 )
 
 // AddTask проверяет и сохраняет задачу, возвращая её ID.
-func (s TaskService) AddTask(date, title, comment, repeat string) (int64, error) {
+func (s TaskService) AddTask(ctx context.Context, date, title, comment, repeat string) (int64, error) {
 	date, err := prepareTaskDate(date, title, repeat, time.Now())
 	if err != nil {
 		return 0, err
 	}
 
-	return s.store.Add(model.Task{Date: date, Title: title, Comment: comment, Repeat: repeat})
+	return s.store.Add(ctx, model.Task{Date: date, Title: title, Comment: comment, Repeat: repeat})
 }
 
 // prepareTaskDate проверяет поля задачи и исправляет просроченную дату.

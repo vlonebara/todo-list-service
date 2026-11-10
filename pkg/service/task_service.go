@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"fmt"
 	"strconv"
 
@@ -9,12 +10,12 @@ import (
 
 // TaskStore описывает операции хранилища, необходимые сервису задач.
 type TaskStore interface {
-	Add(task model.Task) (int64, error)
-	Get(id int64) (model.Task, error)
-	List(filter model.TaskFilter) ([]model.Task, error)
-	Update(task model.Task) error
-	Delete(id int64) error
-	SetDate(id int64, date string) error
+	Add(ctx context.Context, task model.Task) (int64, error)
+	Get(ctx context.Context, id int64) (model.Task, error)
+	List(ctx context.Context, filter model.TaskFilter) ([]model.Task, error)
+	Update(ctx context.Context, task model.Task) error
+	Delete(ctx context.Context, id int64) error
+	SetDate(ctx context.Context, id int64, date string) error
 }
 
 // TaskService проверяет данные задач и обращается к общему хранилищу.

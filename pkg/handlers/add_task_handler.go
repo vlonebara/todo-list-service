@@ -16,7 +16,7 @@ func (h Handler) addTaskHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	id, err := h.tasks.AddTask(request.Date, request.Title, request.Comment, request.Repeat)
+	id, err := h.tasks.AddTask(r.Context(), request.Date, request.Title, request.Comment, request.Repeat)
 	if err != nil {
 		writeTaskError(w, err)
 		return

@@ -12,7 +12,7 @@ func (h Handler) editTaskHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.tasks.EditTask(request.ID, request.Date, request.Title, request.Comment, request.Repeat); err != nil {
+	if err := h.tasks.EditTask(r.Context(), request.ID, request.Date, request.Title, request.Comment, request.Repeat); err != nil {
 		writeTaskError(w, err)
 		return
 	}

@@ -1,15 +1,16 @@
 package db
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/vlonebara/todo-list/pkg/model"
 )
 
 // List возвращает до 15 задач по дате или тексту поиска.
-func (s TaskStore) List(filter model.TaskFilter) ([]model.Task, error) {
+func (s TaskStore) List(ctx context.Context, filter model.TaskFilter) ([]model.Task, error) {
 	query, args := tasksListQuery(filter)
-	rows, err := s.db.Query(query, args...)
+	rows, err := s.db.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("get tasks: %w", err)
 	}

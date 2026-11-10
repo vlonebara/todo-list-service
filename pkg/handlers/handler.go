@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"net/http"
 
 	"github.com/vlonebara/todo-list/pkg/model"
@@ -8,12 +9,12 @@ import (
 
 // TaskService описывает операции задач, необходимые HTTP-обработчикам.
 type TaskService interface {
-	AddTask(date, title, comment, repeat string) (int64, error)
-	GetTask(id string) (model.Task, error)
-	GetTasksList(search string) ([]model.Task, error)
-	EditTask(id, date, title, comment, repeat string) error
-	DeleteTask(id string) error
-	EditTaskStatus(id string) error
+	AddTask(ctx context.Context, date, title, comment, repeat string) (int64, error)
+	GetTask(ctx context.Context, id string) (model.Task, error)
+	GetTasksList(ctx context.Context, search string) ([]model.Task, error)
+	EditTask(ctx context.Context, id, date, title, comment, repeat string) error
+	DeleteTask(ctx context.Context, id string) error
+	EditTaskStatus(ctx context.Context, id string) error
 }
 
 // AuthService описывает проверку пароля и токена для HTTP-запросов.

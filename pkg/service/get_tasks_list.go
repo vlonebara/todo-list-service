@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"time"
 
 	"github.com/vlonebara/todo-list/pkg/model"
@@ -9,8 +10,8 @@ import (
 const searchDateLayout = "02.01.2006"
 
 // GetTasksList возвращает до 15 задач по дате или тексту поиска.
-func (s TaskService) GetTasksList(search string) ([]model.Task, error) {
-	return s.store.List(taskFilter(search))
+func (s TaskService) GetTasksList(ctx context.Context, search string) ([]model.Task, error) {
+	return s.store.List(ctx, taskFilter(search))
 }
 
 // taskFilter распознаёт дату поиска и приводит её к формату задачи.
