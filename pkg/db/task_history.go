@@ -65,12 +65,12 @@ func finishChange(ctx context.Context, tx *sql.Tx, action string, before, after 
 // History возвращает страницу последних действий вместе с отменёнными.
 func (s TaskStore) History(ctx context.Context, offset int) ([]model.TaskChange, error) {
 	rows, err := s.db.QueryContext(ctx,
-		`SELECT id, action, before_task, after_task, created_at, undone FROM task_history ORDER BY id DESC LIMIT 15 OFFSET ?`, offset)
+		`SELECT id, action, before_task, after_task, created_at, undone FROM task_history ORDER BY id DESC LIMIT ? OFFSET ?`, model.PageSize, offset)
 	if err != nil {
 		return nil, fmt.Errorf("get history: %w", err)
 	}
 	defer rows.Close()
-	changes := make([]model.TaskChange, 0, 15)
+	changes := make([]model.TaskChange, 0, model.PageSize)
 	for rows.Next() {
 		var change model.TaskChange
 		var before, after string

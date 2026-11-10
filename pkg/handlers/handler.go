@@ -11,7 +11,9 @@ import (
 type TaskService interface {
 	AddTask(ctx context.Context, date, title, comment, repeat string) (int64, error)
 	GetTask(ctx context.Context, id string) (model.Task, error)
-	GetTasksList(ctx context.Context, search string) ([]model.Task, error)
+	GetTasksList(ctx context.Context, search, period string, page int) ([]model.Task, error)
+	ExportTasks(ctx context.Context) ([]model.Task, error)
+	Health(ctx context.Context) error
 	EditTask(ctx context.Context, id, date, title, comment, repeat string) error
 	DeleteTask(ctx context.Context, id string) error
 	EditTaskStatus(ctx context.Context, id string) error

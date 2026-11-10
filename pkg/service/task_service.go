@@ -13,6 +13,8 @@ type TaskStore interface {
 	Add(ctx context.Context, task model.Task) (int64, error)
 	Get(ctx context.Context, id int64) (model.Task, error)
 	List(ctx context.Context, filter model.TaskFilter) ([]model.Task, error)
+	All(ctx context.Context) ([]model.Task, error)
+	Ping(ctx context.Context) error
 	Update(ctx context.Context, task model.Task) error
 	Delete(ctx context.Context, id int64) error
 	Complete(ctx context.Context, original model.Task, date string) error
