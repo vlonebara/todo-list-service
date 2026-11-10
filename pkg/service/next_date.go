@@ -11,9 +11,15 @@ const dateLayout = "20060102"
 
 // NextDate возвращает ближайшую дату повторения позже now.
 func NextDate(now time.Time, dstart, repeat string) (string, error) {
+	if len(repeat) > 128 {
+		return "", fmt.Errorf("repeat rule must not exceed 128 characters")
+	}
 	start, err := time.Parse(dateLayout, dstart)
 	if err != nil {
 		return "", err
+	}
+	if start.Year() < 1 || now.Year() < 1 || now.Year() > 9999 {
+		return "", fmt.Errorf("date year must be between 1 and 9999")
 	}
 
 	rule := strings.Fields(repeat)
@@ -36,6 +42,9 @@ func NextDate(now time.Time, dstart, repeat string) (string, error) {
 	}
 	if err != nil {
 		return "", err
+	}
+	if next.Year() > 9999 {
+		return "", fmt.Errorf("next date is outside the supported range")
 	}
 	return next.Format(dateLayout), nil
 }
@@ -60,13 +69,25 @@ func nextByYears(start, now time.Time, rule []string) (time.Time, error) {
 	return nextByInterval(start, now, 1, 0), nil
 }
 
-// nextByInterval прибавляет интервал до даты, которая позже now.
+// nextByInterval пропускает прошедшие интервалы без перебора каждого дня.
 func nextByInterval(start, now time.Time, years, days int) time.Time {
-	for date := start.AddDate(years, 0, days); ; date = date.AddDate(years, 0, days) {
-		if afterNow(date, now) {
-			return date
+	if days > 0 {
+		passedDays := (dateOnly(now).Unix() - start.Unix()) / 86400
+		intervals := int(passedDays)/days + 1
+		if intervals < 1 {
+			intervals = 1
 		}
+		return start.AddDate(0, 0, intervals*days)
 	}
+	// Первый перенос сохраняет переход 29 февраля на 1 марта.
+	date := start.AddDate(years, 0, 0)
+	if skipped := now.Year() - date.Year(); skipped > 0 {
+		date = date.AddDate(skipped, 0, 0)
+	}
+	if !afterNow(date, now) {
+		date = date.AddDate(1, 0, 0)
+	}
+	return date
 }
 
 // nextByWeekdays ищет ближайший указанный день недели.
@@ -196,7 +217,7 @@ func parseNumbers(value string, min, max int) ([]int, error) {
 
 // afterNow сравнивает календарные даты без учёта времени суток.
 func afterNow(date, now time.Time) bool {
-	return date.Format(dateLayout) > now.Format(dateLayout)
+	return dateOnly(date).After(dateOnly(now))
 }
 
 // dateOnly возвращает дату без времени суток.
