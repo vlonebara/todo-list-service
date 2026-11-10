@@ -38,6 +38,16 @@ func (h Handler) signoutHandler(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, struct{}{})
 }
 
+// sessionHandler сообщает интерфейсу, нужен ли вход и действительна ли cookie.
+func (h Handler) sessionHandler(w http.ResponseWriter, r *http.Request) {
+	required := h.authentication.Enabled()
+	authenticated := !required
+	if cookie, err := r.Cookie("token"); err == nil && required {
+		authenticated = h.authentication.ValidateToken(cookie.Value)
+	}
+	writeJSON(w, http.StatusOK, map[string]bool{"required": required, "authenticated": authenticated})
+}
+
 // tokenCookie задаёт одинаковые атрибуты cookie для входа и выхода.
 func (h Handler) tokenCookie(token string, maxAge int) *http.Cookie {
 	expires := time.Now().Add(service.TokenLifetime)

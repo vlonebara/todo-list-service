@@ -4,6 +4,9 @@ import "net/http"
 
 // registerRoutes связывает маршруты API с обработчиками и middleware.
 func (h Handler) registerRoutes(mux *http.ServeMux) {
+	mux.HandleFunc("/api/session", methods(map[string]http.HandlerFunc{
+		http.MethodGet: h.sessionHandler,
+	}))
 	mux.HandleFunc("/api/health", methods(map[string]http.HandlerFunc{
 		http.MethodGet: h.healthHandler,
 	}))
