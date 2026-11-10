@@ -24,7 +24,7 @@ func testHandler(t *testing.T) http.Handler {
 	if err != nil {
 		t.Fatal(err)
 	}
-	return New(service.NewTaskService(db.NewTaskStore(database)), authentication, true)
+	return New(service.NewTaskService(db.NewTaskStore(database)), authentication, true, "../../web")
 }
 
 // TestAuthentication проверяет вход, защищённую cookie и выход.

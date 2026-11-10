@@ -34,11 +34,11 @@ type Handler struct {
 }
 
 // New создаёт HTTP-маршруты API и файловый сервер веб-интерфейса.
-func New(tasks TaskService, authentication AuthService, secureCookies bool) http.Handler {
+func New(tasks TaskService, authentication AuthService, secureCookies bool, webDir string) http.Handler {
 	handlers := Handler{tasks: tasks, authentication: authentication, secureCookies: secureCookies}
 	mux := http.NewServeMux()
 	handlers.registerRoutes(mux)
-	mux.Handle("/", http.FileServer(http.Dir("./web")))
+	mux.Handle("/", http.FileServer(http.Dir(webDir)))
 	protection := http.NewCrossOriginProtection()
 	protection.SetDenyHandler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		writeAPIError(w, http.StatusForbidden, "cross-origin request is not allowed")

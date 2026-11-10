@@ -34,7 +34,7 @@ func requestJSON(apipath string, values map[string]any, method string) ([]byte, 
 	}
 	req.Header.Set("Content-Type", "application/json")
 
-	client := &http.Client{}
+	client := &http.Client{Timeout: 5 * time.Second}
 	if len(Token) > 0 {
 		jar, err := cookiejar.New(nil)
 		if err != nil {

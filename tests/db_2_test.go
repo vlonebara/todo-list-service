@@ -20,7 +20,8 @@ type Task struct {
 
 func count(db *sqlx.DB) (int, error) {
 	var count int
-	return count, db.Get(&count, `SELECT count(id) FROM scheduler`)
+	err := db.Get(&count, `SELECT count(id) FROM scheduler`)
+	return count, err
 }
 
 func openDB(t *testing.T) *sqlx.DB {
@@ -30,7 +31,9 @@ func openDB(t *testing.T) *sqlx.DB {
 		dbfile = envFile
 	}
 	db, err := sqlx.Connect("sqlite", dbfile)
-	assert.NoError(t, err)
+	if err != nil {
+		t.Fatal(err)
+	}
 	return db
 }
 
