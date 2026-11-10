@@ -7,8 +7,7 @@ import (
 // editTaskHandler обновляет задачу и возвращает ошибку, если обновление не удалось.
 func (h Handler) editTaskHandler(w http.ResponseWriter, r *http.Request) {
 	var request taskData
-	if err := decodeJSONRequest(r, &request); err != nil {
-		writeAPIError(w, http.StatusBadRequest, err.Error())
+	if !readJSONRequest(w, r, &request) {
 		return
 	}
 

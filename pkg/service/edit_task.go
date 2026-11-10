@@ -9,6 +9,9 @@ import (
 
 // EditTask проверяет и сохраняет новые данные задачи.
 func (s TaskService) EditTask(ctx context.Context, id, date, title, comment, repeat string) error {
+	if err := validateTaskText(title, comment); err != nil {
+		return err
+	}
 	taskID, err := parseTaskID(id)
 	if err != nil {
 		return err

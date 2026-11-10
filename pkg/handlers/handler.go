@@ -28,13 +28,18 @@ type AuthService interface {
 type Handler struct {
 	tasks          TaskService
 	authentication AuthService
+	secureCookies  bool
 }
 
 // New создаёт HTTP-маршруты API и файловый сервер веб-интерфейса.
-func New(tasks TaskService, authentication AuthService) *http.ServeMux {
-	handlers := Handler{tasks: tasks, authentication: authentication}
+func New(tasks TaskService, authentication AuthService, secureCookies bool) http.Handler {
+	handlers := Handler{tasks: tasks, authentication: authentication, secureCookies: secureCookies}
 	mux := http.NewServeMux()
 	handlers.registerRoutes(mux)
 	mux.Handle("/", http.FileServer(http.Dir("./web")))
-	return mux
+	protection := http.NewCrossOriginProtection()
+	protection.SetDenyHandler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		writeAPIError(w, http.StatusForbidden, "cross-origin request is not allowed")
+	}))
+	return securityHeaders(protection.Handler(mux))
 }

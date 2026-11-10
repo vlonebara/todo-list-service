@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -13,9 +14,16 @@ import (
 )
 
 // Run запускает сервер и корректно останавливает его по сигналу ОС.
-func Run(port string, handler http.Handler) error {
-	addr := ":" + port
-	server := &http.Server{Addr: addr, Handler: handler}
+func Run(host, port string, handler http.Handler) error {
+	addr := net.JoinHostPort(host, port)
+	server := &http.Server{
+		Addr: addr, Handler: handler,
+		ReadHeaderTimeout: 5 * time.Second,
+		ReadTimeout:       10 * time.Second,
+		WriteTimeout:      15 * time.Second,
+		IdleTimeout:       60 * time.Second,
+		MaxHeaderBytes:    16 << 10,
+	}
 	shutdown, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 

@@ -8,7 +8,10 @@ func (h Handler) registerRoutes(mux *http.ServeMux) {
 		http.MethodGet: nextDayHandler,
 	}))
 	mux.HandleFunc("/api/signin", methods(map[string]http.HandlerFunc{
-		http.MethodPost: h.authHandler,
+		http.MethodPost: limitSignin(h.authHandler),
+	}))
+	mux.HandleFunc("/api/signout", methods(map[string]http.HandlerFunc{
+		http.MethodPost: h.signoutHandler,
 	}))
 	mux.HandleFunc("/api/tasks", methods(map[string]http.HandlerFunc{
 		http.MethodGet: auth(h.authentication, h.getTasksListHandler),

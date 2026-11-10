@@ -13,8 +13,8 @@ import (
 )
 
 const (
-	authTokenLifetime = 8 * time.Hour
-	jwtSecretSize     = 32
+	TokenLifetime = 8 * time.Hour
+	jwtSecretSize = 32
 )
 
 // AuthService хранит пароль и ключ, подготовленные при запуске сервера.
@@ -93,7 +93,7 @@ func createAuthToken(password string, secret []byte, now time.Time) (string, err
 		PasswordHash: passwordChecksum(password, secret),
 		RegisteredClaims: jwt.RegisteredClaims{
 			IssuedAt:  jwt.NewNumericDate(now),
-			ExpiresAt: jwt.NewNumericDate(now.Add(authTokenLifetime)),
+			ExpiresAt: jwt.NewNumericDate(now.Add(TokenLifetime)),
 		},
 	}
 	token, err := jwt.NewWithClaims(jwt.SigningMethodHS256, claims).SignedString(secret)

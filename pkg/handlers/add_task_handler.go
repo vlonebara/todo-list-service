@@ -1,9 +1,6 @@
 package handlers
 
 import (
-	"encoding/json"
-	"errors"
-	"io"
 	"net/http"
 	"strconv"
 )
@@ -11,8 +8,7 @@ import (
 // addTaskHandler обрабатывает POST-запрос и возвращает ID задачи или ошибку.
 func (h Handler) addTaskHandler(w http.ResponseWriter, r *http.Request) {
 	var request taskData
-	if err := decodeJSONRequest(r, &request); err != nil {
-		writeAPIError(w, http.StatusBadRequest, err.Error())
+	if !readJSONRequest(w, r, &request) {
 		return
 	}
 
@@ -23,16 +19,4 @@ func (h Handler) addTaskHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, http.StatusOK, map[string]string{"id": strconv.FormatInt(id, 10)})
-}
-
-// decodeJSONRequest читает один JSON-объект из тела запроса.
-func decodeJSONRequest(r *http.Request, value any) error {
-	decoder := json.NewDecoder(r.Body)
-	if err := decoder.Decode(value); err != nil {
-		return errors.New("invalid json")
-	}
-	if err := decoder.Decode(&struct{}{}); err != io.EOF {
-		return errors.New("invalid json")
-	}
-	return nil
 }

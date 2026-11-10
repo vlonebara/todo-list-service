@@ -40,6 +40,6 @@ func run(cfg config.Config) error {
 
 	store := db.NewTaskStore(database)
 	tasks := service.NewTaskService(store)
-	handler := handlers.New(tasks, authentication)
-	return server.Run(cfg.Port, handler)
+	handler := handlers.New(tasks, authentication, cfg.SecureCookies)
+	return server.Run(cfg.Host, cfg.Port, handler)
 }
