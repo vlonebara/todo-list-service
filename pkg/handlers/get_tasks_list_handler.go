@@ -10,7 +10,7 @@ type getTasksListResponse struct {
 func (h Handler) getTasksListHandler(w http.ResponseWriter, r *http.Request) {
 	tasks, err := h.tasks.GetTasksList(r.URL.Query().Get("search"))
 	if err != nil {
-		writeAPIError(w, http.StatusInternalServerError, err.Error())
+		writeTaskError(w, err)
 		return
 	}
 

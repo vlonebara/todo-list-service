@@ -2,12 +2,28 @@ package handlers
 
 import (
 	"encoding/json"
+	"errors"
 	"log"
 	"net/http"
+
+	"github.com/vlonebara/todo-list/pkg/model"
 )
 
 type apiErrorResponse struct {
 	Error string `json:"error"`
+}
+
+// writeTaskError выбирает HTTP-код и скрывает внутренние ошибки сервера.
+func writeTaskError(w http.ResponseWriter, err error) {
+	switch {
+	case errors.Is(err, model.ErrInvalidTask):
+		writeAPIError(w, http.StatusBadRequest, err.Error())
+	case errors.Is(err, model.ErrTaskNotFound):
+		writeAPIError(w, http.StatusNotFound, "task not found")
+	default:
+		log.Printf("task request: %v", err)
+		writeAPIError(w, http.StatusInternalServerError, "internal server error")
+	}
 }
 
 // writeAPIError возвращает клиенту JSON с описанием ошибки.

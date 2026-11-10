@@ -6,7 +6,7 @@ import "net/http"
 func (h Handler) getTaskHandler(w http.ResponseWriter, r *http.Request) {
 	task, err := h.tasks.GetTask(r.URL.Query().Get("id"))
 	if err != nil {
-		writeAPIError(w, http.StatusBadRequest, err.Error())
+		writeTaskError(w, err)
 		return
 	}
 
