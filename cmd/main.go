@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"time"
+	_ "time/tzdata" // Часовые пояса доступны и в минимальном Docker-образе.
 
 	"github.com/vlonebara/todo-list/pkg/config"
 	"github.com/vlonebara/todo-list/pkg/db"
