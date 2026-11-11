@@ -1,8 +1,9 @@
-import { request, query, pageSize } from "./api.js";
+import { request, query } from "./api.js";
 import { createTaskForm } from "./task_form.js";
 import { renderTasks } from "./task_list.js";
 import { renderHistory } from "./history.js";
 import { setupReminders } from "./reminders.js";
+import { createPagination } from "./pagination.js";
 import { runAction, showMessage } from "./ui.js";
 
 const message = document.querySelector("#message");
@@ -12,39 +13,24 @@ const more = document.querySelector("#more-tasks");
 const moreHistory = document.querySelector("#more-history");
 const search = document.querySelector("#search");
 const period = document.querySelector("#period");
-let tasks = [];
-let changes = [];
-let page = 0;
-let historyPage = 0;
-let generation = 0;
-let historyGeneration = 0;
 let historyVisible = false;
 const checkReminders = setupReminders();
 const taskForm = createTaskForm(refresh);
 
-// loadTasks обновляет страницу списка и игнорирует запоздавший ответ поиска.
-async function loadTasks(reset = true) {
-    const version = ++generation;
-    const nextPage = reset ? 1 : page + 1;
-    const result = await request(`tasks?${query({ search: search.value.trim(), period: period.value, page: nextPage })}`);
-    if (version !== generation) return;
-    tasks = reset ? result.tasks : [...tasks, ...result.tasks];
-    page = nextPage;
+const loadTaskPage = createPagination("tasks", "tasks", (tasks, hasMore) => {
     renderTasks(taskContainer, tasks, actions);
-    more.hidden = result.tasks.length < pageSize;
+    more.hidden = !hasMore;
     document.querySelector("#task-count").textContent = `Показано задач: ${tasks.length}`;
-}
+});
 
-// loadHistory загружает очередную страницу истории.
-async function loadHistory(reset = true) {
-	const version = ++historyGeneration;
-    const nextPage = reset ? 1 : historyPage + 1;
-    const result = await request(`history?${query({ page: nextPage })}`);
-    if (version !== historyGeneration) return;
-    changes = reset ? result.history : [...changes, ...result.history];
-    historyPage = nextPage;
+const loadHistory = createPagination("history", "history", (changes, hasMore) => {
     renderHistory(historyContainer, changes);
-    moreHistory.hidden = result.history.length < pageSize;
+    moreHistory.hidden = !hasMore;
+});
+
+// loadTasks передаёт текущие фильтры общей функции загрузки страниц.
+function loadTasks(reset = true) {
+    return loadTaskPage(reset, { search: search.value.trim(), period: period.value });
 }
 
 // refresh обновляет данные после одного завершённого действия.
@@ -57,18 +43,25 @@ async function refresh() {
 
 const actions = {
     edit: (task, button) => runAction(button, message, () => taskForm.open(task.id)),
-    done: (task, button) => runAction(button, message, async () => {
-        await request(`task/done?${query({ id: task.id })}`, { method: "POST", body: {} });
-        await refresh();
-    }),
+    done: (task, button) => runAction(button, message,
+        () => changeTask(`task/done?${query({ id: task.id })}`, { method: "POST", body: {} })),
     remove: (task, button) => {
         if (!confirm(`Удалить задачу «${task.title}»?`)) return;
-        return runAction(button, message, async () => {
-            await request(`task?${query({ id: task.id })}`, { method: "DELETE" });
-            await refresh();
-        });
+        return runAction(button, message,
+            () => changeTask(`task?${query({ id: task.id })}`, { method: "DELETE" }));
     },
 };
+
+// changeTask выполняет изменение и обновляет связанные списки и напоминания.
+async function changeTask(path, options) {
+    await request(path, options);
+    await refresh();
+}
+
+// reportError показывает ошибку загрузки в общем сообщении страницы.
+function reportError(error) {
+    showMessage(message, error.message, true);
+}
 
 // bindAction связывает кнопку с общей блокировкой и обработкой ошибок.
 function bindAction(selector, action) {
@@ -87,8 +80,7 @@ async function toggleHistory(button) {
 
 // undoLast восстанавливает данные после последнего действия.
 async function undoLast() {
-    await request("task/undo", { method: "POST", body: {} });
-    await refresh();
+    await changeTask("task/undo", { method: "POST", body: {} });
     showMessage(message, "Последнее действие отменено.");
 }
 
@@ -123,11 +115,11 @@ document.querySelector("#search-form").addEventListener("submit", event => {
     event.preventDefault();
     runAction(document.querySelector("#find"), message, () => loadTasks());
 });
-period.addEventListener("change", () => loadTasks().catch(error => showMessage(message, error.message, true)));
+period.addEventListener("change", () => loadTasks().catch(reportError));
 search.addEventListener("input", () => {
-    if (!search.value) loadTasks().catch(error => showMessage(message, error.message, true));
+    if (!search.value) loadTasks().catch(reportError);
 });
 request("session").then(session => {
     document.querySelector("#signout").hidden = !session.required;
-}).catch(error => showMessage(message, error.message, true));
-loadTasks().catch(error => showMessage(message, error.message, true));
+}).catch(reportError);
+loadTasks().catch(reportError);

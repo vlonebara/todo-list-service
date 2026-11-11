@@ -209,6 +209,7 @@ TODO_DBFILE=./restored.db go run ./cmd
 - [ui.js](./web/js/ui.js) — безопасный вывод сообщений и блокировка кнопок;
 - [task_form.js](./web/js/task_form.js) — чистое состояние формы и повторения;
 - [task_list.js](./web/js/task_list.js) — список задач;
+- [pagination.js](./web/js/pagination.js) — общая загрузка страниц задач и истории с защитой от запоздавших ответов;
 - [history.js](./web/js/history.js) — история и сохранённые данные;
 - [reminders.js](./web/js/reminders.js) — проверка сегодняшних задач раз в минуту;
 - [app.js](./web/js/app.js), [login.js](./web/js/login.js) — связывание интерфейса и вход.

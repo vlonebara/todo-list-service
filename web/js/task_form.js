@@ -21,6 +21,14 @@ function selectedValues(form, name) {
     return [...form.querySelectorAll(`[name="${name}"]:checked`)].map(input => input.value);
 }
 
+// selectChoices отмечает группу флажков по сохранённому списку чисел.
+function selectChoices(form, name, values) {
+    const selected = values.split(",").map(Number);
+    for (const input of form.querySelectorAll(`[name="${name}"]`)) {
+        input.checked = selected.includes(Number(input.value));
+    }
+}
+
 // repeatRule формирует проверенное правило из полей формы.
 export function repeatRule(form) {
     const fields = form.elements;
@@ -53,7 +61,7 @@ function fillRepeat(form, rule) {
     fields.mode.value = mode;
     if (mode === "d") fields.interval.value = values;
     if (mode === "w") {
-        for (const input of form.querySelectorAll('[name="weekdays"]')) input.checked = values.split(",").map(Number).includes(Number(input.value));
+        selectChoices(form, "weekdays", values);
     }
     if (mode === "m") {
         const days = values.split(",").map(Number);
@@ -61,7 +69,7 @@ function fillRepeat(form, rule) {
         fields.last.checked = days.includes(-1);
         fields.penultimate.checked = days.includes(-2);
         if (months) {
-            for (const input of form.querySelectorAll('[name="months"]')) input.checked = months.split(",").map(Number).includes(Number(input.value));
+            selectChoices(form, "months", months);
         }
     }
 }
@@ -87,7 +95,7 @@ export function createTaskForm(onSaved) {
     createChoices(form.querySelector("#weekdays"), "weekdays", ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"], false);
     createChoices(form.querySelector("#months"), "months", ["Январь", "Февраль", "Март", "Апрель", "Май", "Июнь", "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь"], true);
     form.elements.mode.addEventListener("change", () => updateRepeatFields(form));
-    document.querySelector("#close-task").addEventListener("click", () => dialog.close());
+    close.addEventListener("click", () => dialog.close());
     dialog.addEventListener("cancel", event => { if (save.disabled) event.preventDefault(); });
     form.addEventListener("submit", event => {
         event.preventDefault();

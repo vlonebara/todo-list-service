@@ -13,8 +13,7 @@ h1, h2, h3, p { margin-top: 0; }
 h1 { font-size: 1.35rem; margin-bottom: 0; }
 h2 { font-size: 1.2rem; }
 h3 { font-size: 1rem; margin-bottom: .4rem; overflow-wrap: anywhere; }
-button, input, select, textarea { font: inherit; }
-button, input, select, textarea { border: 1px solid #c9d1dd; border-radius: 6px; }
+button, input, select, textarea { font: inherit; border: 1px solid #c9d1dd; border-radius: 6px; }
 input, select, textarea { padding: .6rem .7rem; background: #fff; color: inherit; min-width: 0; }
 button { padding: .55rem .85rem; background: #fff; color: #293549; cursor: pointer; }
 button:hover { background: #edf1f7; }
