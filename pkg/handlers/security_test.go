@@ -27,16 +27,26 @@ func testHandler(t *testing.T, password string) http.Handler {
 	return New(service.NewTaskService(db.NewTaskStore(database)), authentication, true, "../../web")
 }
 
+// serveRequest выполняет запрос к обработчику и проверяет ожидаемый HTTP-код.
+func serveRequest(t *testing.T, handler http.Handler, request *http.Request, status int) *httptest.ResponseRecorder {
+	t.Helper()
+	response := httptest.NewRecorder()
+	handler.ServeHTTP(response, request)
+	if response.Code != status {
+		t.Fatalf("got %d, want %d: %s", response.Code, status, response.Body.String())
+	}
+	return response
+}
+
 // TestAuthentication проверяет вход, защищённую cookie и выход.
 func TestAuthentication(t *testing.T) {
 	handler := testHandler(t, "test-password")
 	request := httptest.NewRequest(http.MethodPost, "/api/signin", strings.NewReader(`{"password":"test-password"}`))
 	request.Header.Set("Content-Type", "application/json")
-	response := httptest.NewRecorder()
-	handler.ServeHTTP(response, request)
+	response := serveRequest(t, handler, request, http.StatusOK)
 	cookies := response.Result().Cookies()
-	if response.Code != 200 || len(cookies) != 1 {
-		t.Fatalf("signin failed: %d", response.Code)
+	if len(cookies) != 1 {
+		t.Fatalf("got %d cookies, want 1", len(cookies))
 	}
 	cookie := cookies[0]
 	if !cookie.HttpOnly || !cookie.Secure || cookie.SameSite != http.SameSiteStrictMode || cookie.MaxAge != 28800 {
@@ -56,15 +66,11 @@ func TestAuthentication(t *testing.T) {
 			if item.cookie != nil {
 				request.AddCookie(item.cookie)
 			}
-			response := httptest.NewRecorder()
-			handler.ServeHTTP(response, request)
-			if response.Code != item.status {
-				t.Fatalf("got %d, want %d", response.Code, item.status)
-			}
+			serveRequest(t, handler, request, item.status)
 		})
 	}
-	response = httptest.NewRecorder()
-	handler.ServeHTTP(response, httptest.NewRequest(http.MethodPost, "/api/signout", nil))
+	request = httptest.NewRequest(http.MethodPost, "/api/signout", nil)
+	response = serveRequest(t, handler, request, http.StatusOK)
 	if response.Result().Cookies()[0].MaxAge != -1 {
 		t.Fatal("signout did not clear cookie")
 	}
@@ -90,11 +96,7 @@ func TestRequestProtection(t *testing.T) {
 			if item.origin != "" {
 				request.Header.Set("Origin", item.origin)
 			}
-			response := httptest.NewRecorder()
-			handler.ServeHTTP(response, request)
-			if response.Code != item.status {
-				t.Fatalf("got %d, want %d", response.Code, item.status)
-			}
+			serveRequest(t, handler, request, item.status)
 		})
 	}
 }
@@ -132,11 +134,7 @@ func TestLocalHostProtection(t *testing.T) {
 		t.Run(item.name, func(t *testing.T) {
 			request := httptest.NewRequest(http.MethodGet, "/api/tasks", nil)
 			request.Host = item.host
-			response := httptest.NewRecorder()
-			handler.ServeHTTP(response, request)
-			if response.Code != item.status {
-				t.Fatalf("got %d, want %d", response.Code, item.status)
-			}
+			serveRequest(t, handler, request, item.status)
 		})
 	}
 }

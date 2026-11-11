@@ -11,7 +11,6 @@ import (
 	"path/filepath"
 	"strconv"
 	"testing"
-	"time"
 
 	"github.com/vlonebara/todo-list/pkg/db"
 	"github.com/vlonebara/todo-list/pkg/handlers"
@@ -56,7 +55,7 @@ func runTests(m *testing.M) (int, error) {
 	if err != nil {
 		return 1, err
 	}
-	Token, err = testToken(server.URL)
+	Token, err = testToken()
 	if err != nil {
 		return 1, err
 	}
@@ -64,10 +63,9 @@ func runTests(m *testing.M) (int, error) {
 }
 
 // testToken получает свежий JWT тем же запросом, которым пользуется фронтенд.
-func testToken(address string) (string, error) {
-	client := http.Client{Timeout: 5 * time.Second}
-	response, err := client.Post(address+"/api/signin", "application/json",
-		bytes.NewBufferString(`{"password":"integration-test-password"}`))
+func testToken() (string, error) {
+	response, err := sendRequest(http.MethodPost, "api/signin",
+		bytes.NewBufferString(`{"password":"integration-test-password"}`), "")
 	if err != nil {
 		return "", err
 	}

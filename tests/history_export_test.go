@@ -1,7 +1,6 @@
 package tests
 
 import (
-	"encoding/json"
 	"net/http"
 	"testing"
 )
@@ -16,14 +15,10 @@ func TestHistoryAndExport(t *testing.T) {
 	if !ok || id == "" {
 		t.Fatal("task was not created")
 	}
-	body, err := requestJSON("api/tasks/export", nil, http.MethodGet)
-	if err != nil {
-		t.Fatal(err)
-	}
 	var exported struct {
 		Tasks []map[string]string `json:"tasks"`
 	}
-	if err := json.Unmarshal(body, &exported); err != nil {
+	if err := readJSON("api/tasks/export", nil, http.MethodGet, &exported); err != nil {
 		t.Fatal(err)
 	}
 	found := false
@@ -35,17 +30,13 @@ func TestHistoryAndExport(t *testing.T) {
 	if !found {
 		t.Fatal("created task was not exported")
 	}
-	body, err = requestJSON("api/history", nil, http.MethodGet)
-	if err != nil {
-		t.Fatal(err)
-	}
 	var history struct {
 		History []struct {
 			Action string            `json:"action"`
 			After  map[string]string `json:"after"`
 		} `json:"history"`
 	}
-	if err := json.Unmarshal(body, &history); err != nil {
+	if err := readJSON("api/history", nil, http.MethodGet, &history); err != nil {
 		t.Fatal(err)
 	}
 	if len(history.History) == 0 || history.History[0].After["id"] != id {

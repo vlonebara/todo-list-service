@@ -11,10 +11,7 @@ import (
 func TestTaskList(t *testing.T) {
 	store := testStore(t)
 	for i := 0; i < 20; i++ {
-		_, err := store.Add(t.Context(), model.Task{Date: "20300101", Title: fmt.Sprintf("Бассейн %02d", i), Comment: "C++ A&B #tag 100%"})
-		if err != nil {
-			t.Fatal(err)
-		}
+		addTestTask(t, store, model.Task{Date: "20300101", Title: fmt.Sprintf("Бассейн %02d", i), Comment: "C++ A&B #tag 100%"})
 	}
 	cases := []struct {
 		name, search string
@@ -48,9 +45,7 @@ func TestTaskList(t *testing.T) {
 func TestTaskDateFilters(t *testing.T) {
 	store := testStore(t)
 	for _, date := range []string{"20290101", "20300101", "20310101"} {
-		if _, err := store.Add(t.Context(), model.Task{Date: date, Title: date}); err != nil {
-			t.Fatal(err)
-		}
+		addTestTask(t, store, model.Task{Date: date, Title: date})
 	}
 	for _, item := range []struct {
 		name   string

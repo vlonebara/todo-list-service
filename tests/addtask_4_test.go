@@ -1,78 +1,14 @@
 package tests
 
 import (
-	"bytes"
-	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
-	"net/http/cookiejar"
 	"strconv"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 )
-
-func requestJSON(apipath string, values map[string]any, method string) ([]byte, error) {
-	var (
-		data []byte
-		err  error
-	)
-
-	if len(values) > 0 {
-		data, err = json.Marshal(values)
-		if err != nil {
-			return nil, err
-		}
-	}
-	var resp *http.Response
-
-	req, err := http.NewRequest(method, getURL(apipath), bytes.NewBuffer(data))
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Content-Type", "application/json")
-
-	client := &http.Client{Timeout: 5 * time.Second}
-	if len(Token) > 0 {
-		jar, err := cookiejar.New(nil)
-		if err != nil {
-			return nil, err
-		}
-		jar.SetCookies(req.URL, []*http.Cookie{
-			{
-				Name:  "token",
-				Value: Token,
-			},
-		})
-		client.Jar = jar
-	}
-
-	resp, err = client.Do(req)
-	if err != nil {
-		return nil, err
-	}
-
-	if resp.Body != nil {
-		defer resp.Body.Close()
-	}
-	return io.ReadAll(resp.Body)
-}
-
-func postJSON(apipath string, values map[string]any, method string) (map[string]any, error) {
-	var (
-		m   map[string]any
-		err error
-	)
-
-	body, err := requestJSON(apipath, values, method)
-	if err != nil {
-		return nil, err
-	}
-	err = json.Unmarshal(body, &m)
-	return m, err
-}
 
 type task struct {
 	date    string
@@ -81,9 +17,16 @@ type task struct {
 	repeat  string
 }
 
+// fields формирует одинаковые JSON-поля для создания и редактирования задачи.
+func (task task) fields() map[string]any {
+	return map[string]any{
+		"date": task.date, "title": task.title,
+		"comment": task.comment, "repeat": task.repeat,
+	}
+}
+
 func TestAddTask(t *testing.T) {
 	db := openDB(t)
-	defer db.Close()
 
 	tbl := []task{
 		{"20240129", "", "", ""},
@@ -93,12 +36,7 @@ func TestAddTask(t *testing.T) {
 		{"20240212", "Заголовок", "", "ooops"},
 	}
 	for _, v := range tbl {
-		m, err := postJSON("api/task", map[string]any{
-			"date":    v.date,
-			"title":   v.title,
-			"comment": v.comment,
-			"repeat":  v.repeat,
-		}, http.MethodPost)
+		m, err := postJSON("api/task", v.fields(), http.MethodPost)
 		assert.NoError(t, err)
 
 		e, ok := m["error"]
@@ -114,12 +52,7 @@ func TestAddTask(t *testing.T) {
 			if today {
 				v.date = now.Format(`20060102`)
 			}
-			m, err := postJSON("api/task", map[string]any{
-				"date":    v.date,
-				"title":   v.title,
-				"comment": v.comment,
-				"repeat":  v.repeat,
-			}, http.MethodPost)
+			m, err := postJSON("api/task", v.fields(), http.MethodPost)
 			assert.NoError(t, err)
 
 			e, ok := m["error"]
@@ -127,7 +60,6 @@ func TestAddTask(t *testing.T) {
 				t.Errorf("Неожиданная ошибка %v для задачи %v", e, v)
 				continue
 			}
-			var task Task
 			var mid any
 			mid, ok = m["id"]
 			if !ok {
@@ -136,8 +68,7 @@ func TestAddTask(t *testing.T) {
 			}
 			id := fmt.Sprint(mid)
 
-			err = db.Get(&task, `SELECT * FROM scheduler WHERE id=?`, id)
-			assert.NoError(t, err)
+			task := getDBTask(t, db, id)
 			assert.Equal(t, id, strconv.FormatInt(task.ID, 10))
 
 			assert.Equal(t, v.title, task.Title)

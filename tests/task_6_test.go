@@ -1,7 +1,6 @@
 package tests
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -12,8 +11,6 @@ import (
 )
 
 func TestTask(t *testing.T) {
-	db := openDB(t)
-	defer db.Close()
 
 	now := time.Now()
 
@@ -26,19 +23,15 @@ func TestTask(t *testing.T) {
 
 	todo := addTask(t, task)
 
-	body, err := requestJSON("api/task", nil, http.MethodGet)
-	assert.NoError(t, err)
 	var m map[string]string
-	err = json.Unmarshal(body, &m)
+	err := readJSON("api/task", nil, http.MethodGet, &m)
 	assert.NoError(t, err)
 
 	e, ok := m["error"]
 	assert.False(t, !ok || len(fmt.Sprint(e)) == 0,
 		"Ожидается ошибка для вызова /api/task")
 
-	body, err = requestJSON("api/task?id="+todo, nil, http.MethodGet)
-	assert.NoError(t, err)
-	err = json.Unmarshal(body, &m)
+	err = readJSON("api/task?id="+todo, nil, http.MethodGet, &m)
 	assert.NoError(t, err)
 
 	assert.Equal(t, todo, m["id"])
@@ -55,7 +48,6 @@ type fulltask struct {
 
 func TestEditTask(t *testing.T) {
 	db := openDB(t)
-	defer db.Close()
 
 	now := time.Now()
 
@@ -78,13 +70,9 @@ func TestEditTask(t *testing.T) {
 		{id, task{"20240212", "Заголовок", "", "ooops"}},
 	}
 	for _, v := range tbl {
-		m, err := postJSON("api/task", map[string]any{
-			"id":      v.id,
-			"date":    v.date,
-			"title":   v.title,
-			"comment": v.comment,
-			"repeat":  v.repeat,
-		}, http.MethodPut)
+		fields := v.fields()
+		fields["id"] = v.id
+		m, err := postJSON("api/task", fields, http.MethodPut)
 		assert.NoError(t, err)
 
 		var errVal string
@@ -102,9 +90,7 @@ func TestEditTask(t *testing.T) {
 		e, ok := mupd["error"]
 		assert.False(t, ok && fmt.Sprint(e) != "")
 
-		var task Task
-		err = db.Get(&task, `SELECT * FROM scheduler WHERE id=?`, id)
-		assert.NoError(t, err)
+		task := getDBTask(t, db, id)
 
 		assert.Equal(t, id, strconv.FormatInt(task.ID, 10))
 		assert.Equal(t, newVals["title"], task.Title)

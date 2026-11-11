@@ -7,6 +7,16 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
+// signTestToken подписывает проверяемые варианты JWT заданным алгоритмом.
+func signTestToken(t *testing.T, method jwt.SigningMethod, claims authClaims, secret []byte) string {
+	t.Helper()
+	token, err := jwt.NewWithClaims(method, claims).SignedString(secret)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return token
+}
+
 // TestAuthenticationTokens проверяет срок, алгоритм, ключ и парольную метку JWT.
 func TestAuthenticationTokens(t *testing.T) {
 	authentication, err := NewAuthService("test-password", "test-only-secret-at-least-32-bytes")
@@ -23,19 +33,10 @@ func TestAuthenticationTokens(t *testing.T) {
 	}
 	claims := authClaims{PasswordHash: passwordChecksum(authentication.password, authentication.secret),
 		RegisteredClaims: jwt.RegisteredClaims{ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour))}}
-	otherAlgorithm, err := jwt.NewWithClaims(jwt.SigningMethodHS384, claims).SignedString(authentication.secret)
-	if err != nil {
-		t.Fatal(err)
-	}
-	noExpiry, err := jwt.NewWithClaims(jwt.SigningMethodHS256, authClaims{PasswordHash: claims.PasswordHash}).SignedString(authentication.secret)
-	if err != nil {
-		t.Fatal(err)
-	}
+	otherAlgorithm := signTestToken(t, jwt.SigningMethodHS384, claims, authentication.secret)
+	noExpiry := signTestToken(t, jwt.SigningMethodHS256, authClaims{PasswordHash: claims.PasswordHash}, authentication.secret)
 	claims.PasswordHash = "wrong password marker"
-	wrongMarker, err := jwt.NewWithClaims(jwt.SigningMethodHS256, claims).SignedString(authentication.secret)
-	if err != nil {
-		t.Fatal(err)
-	}
+	wrongMarker := signTestToken(t, jwt.SigningMethodHS256, claims, authentication.secret)
 	for _, item := range []struct {
 		name, token string
 		valid       bool

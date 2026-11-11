@@ -24,11 +24,7 @@ func TestCreatePreservesLegacyDatabase(t *testing.T) {
 	if err := legacy.Close(); err != nil {
 		t.Fatal(err)
 	}
-	database, err := OpenDatabase(file)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer database.Close()
+	database := openTestDatabase(t, file)
 	if err := Create(database); err != nil {
 		t.Fatal(err)
 	}

@@ -17,23 +17,40 @@ type Task struct {
 	Repeat  string `db:"repeat"`
 }
 
+// count возвращает количество задач для проверки изменений таблицы.
 func count(db *sqlx.DB) (int, error) {
 	var count int
 	err := db.Get(&count, `SELECT count(id) FROM scheduler`)
 	return count, err
 }
 
+// openDB открывает тестовую БД и закрывает её после сценария.
 func openDB(t *testing.T) *sqlx.DB {
+	t.Helper()
 	db, err := sqlx.Connect("sqlite", DBFile)
 	if err != nil {
 		t.Fatal(err)
 	}
+	t.Cleanup(func() {
+		if err := db.Close(); err != nil {
+			t.Error(err)
+		}
+	})
 	return db
+}
+
+// getDBTask читает сохранённую задачу для сравнения с отправленными данными.
+func getDBTask(t *testing.T, db *sqlx.DB, id any) Task {
+	t.Helper()
+	var task Task
+	if err := db.Get(&task, `SELECT * FROM scheduler WHERE id=?`, id); err != nil {
+		t.Fatal(err)
+	}
+	return task
 }
 
 func TestDB(t *testing.T) {
 	db := openDB(t)
-	defer db.Close()
 
 	before, err := count(db)
 	assert.NoError(t, err)
@@ -45,10 +62,9 @@ func TestDB(t *testing.T) {
 	assert.NoError(t, err)
 
 	id, err := res.LastInsertId()
-
-	var task Task
-	err = db.Get(&task, `SELECT * FROM scheduler WHERE id=?`, id)
 	assert.NoError(t, err)
+
+	task := getDBTask(t, db, id)
 	assert.Equal(t, id, task.ID)
 	assert.Equal(t, `Todo`, task.Title)
 	assert.Equal(t, `Комментарий`, task.Comment)

@@ -12,12 +12,7 @@ import (
 func TestTaskHistory(t *testing.T) {
 	store := testStore(t)
 	ctx := t.Context()
-	task := model.Task{Date: "20300101", Title: "original", Repeat: "d 1"}
-	id, err := store.Add(ctx, task)
-	if err != nil {
-		t.Fatal(err)
-	}
-	task.ID = id
+	task := addTestTask(t, store, model.Task{Date: "20300101", Title: "original", Repeat: "d 1"})
 	task.Title = "edited"
 	if err := store.Update(ctx, task); err != nil {
 		t.Fatal(err)
@@ -25,7 +20,7 @@ func TestTaskHistory(t *testing.T) {
 	if err := store.Complete(ctx, task, "20300102"); err != nil {
 		t.Fatal(err)
 	}
-	if err := store.Delete(ctx, id); err != nil {
+	if err := store.Delete(ctx, task.ID); err != nil {
 		t.Fatal(err)
 	}
 	changes, err := store.History(ctx, 0)
@@ -35,28 +30,28 @@ func TestTaskHistory(t *testing.T) {
 	if err := store.Undo(ctx); err != nil {
 		t.Fatal(err)
 	}
-	got, err := store.Get(ctx, id)
+	got, err := store.Get(ctx, task.ID)
 	if err != nil || got.Date != "20300102" {
 		t.Fatalf("delete was not undone: %v, %v", got, err)
 	}
 	if err := store.Undo(ctx); err != nil {
 		t.Fatal(err)
 	}
-	got, err = store.Get(ctx, id)
+	got, err = store.Get(ctx, task.ID)
 	if err != nil || got != task {
 		t.Fatalf("completion was not undone: %v, %v", got, err)
 	}
 	if err := store.Undo(ctx); err != nil {
 		t.Fatal(err)
 	}
-	got, err = store.Get(ctx, id)
+	got, err = store.Get(ctx, task.ID)
 	if err != nil || got.Title != "original" {
 		t.Fatalf("edit was not undone: %v, %v", got, err)
 	}
 	if err := store.Undo(ctx); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := store.Get(ctx, id); !errors.Is(err, model.ErrTaskNotFound) {
+	if _, err := store.Get(ctx, task.ID); !errors.Is(err, model.ErrTaskNotFound) {
 		t.Fatalf("add was not undone: %v", err)
 	}
 	if err := store.Undo(ctx); !errors.Is(err, model.ErrHistoryEmpty) {
@@ -67,12 +62,7 @@ func TestTaskHistory(t *testing.T) {
 // TestConcurrentCompletion запрещает два изменения на основе одного снимка.
 func TestConcurrentCompletion(t *testing.T) {
 	store := testStore(t)
-	task := model.Task{Date: "20300101", Title: "test", Repeat: "d 1"}
-	id, err := store.Add(t.Context(), task)
-	if err != nil {
-		t.Fatal(err)
-	}
-	task.ID = id
+	task := addTestTask(t, store, model.Task{Date: "20300101", Title: "test", Repeat: "d 1"})
 	var wg sync.WaitGroup
 	results := make(chan error, 2)
 	for i := 0; i < 2; i++ {
@@ -104,13 +94,8 @@ func TestConcurrentCompletion(t *testing.T) {
 // TestHistoryFailureRollback проверяет откат задачи при ошибке записи истории.
 func TestHistoryFailureRollback(t *testing.T) {
 	store := testStore(t)
-	task := model.Task{Date: "20300101", Title: "original"}
-	id, err := store.Add(t.Context(), task)
-	if err != nil {
-		t.Fatal(err)
-	}
-	task.ID = id
-	_, err = store.db.Exec(`CREATE TRIGGER reject_history BEFORE INSERT ON task_history BEGIN SELECT RAISE(ABORT, 'test failure'); END`)
+	task := addTestTask(t, store, model.Task{Date: "20300101", Title: "original"})
+	_, err := store.db.Exec(`CREATE TRIGGER reject_history BEFORE INSERT ON task_history BEGIN SELECT RAISE(ABORT, 'test failure'); END`)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -119,7 +104,7 @@ func TestHistoryFailureRollback(t *testing.T) {
 	if err := store.Update(t.Context(), changed); err == nil {
 		t.Fatal("expected history failure")
 	}
-	got, err := store.Get(t.Context(), id)
+	got, err := store.Get(t.Context(), task.ID)
 	if err != nil || got != task {
 		t.Fatalf("failed action changed task: %v, %v", got, err)
 	}
@@ -128,11 +113,8 @@ func TestHistoryFailureRollback(t *testing.T) {
 // TestUndoDeletedTaskConflict не восстанавливает задачу поверх внешнего удаления.
 func TestUndoDeletedTaskConflict(t *testing.T) {
 	store := testStore(t)
-	id, err := store.Add(t.Context(), model.Task{Date: "20300101", Title: "test"})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if _, err := store.db.Exec(`DELETE FROM scheduler WHERE id = ?`, id); err != nil {
+	task := addTestTask(t, store, model.Task{Date: "20300101", Title: "test"})
+	if _, err := store.db.Exec(`DELETE FROM scheduler WHERE id = ?`, task.ID); err != nil {
 		t.Fatal(err)
 	}
 	if err := store.Undo(t.Context()); !errors.Is(err, model.ErrConflict) {

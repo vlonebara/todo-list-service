@@ -1,7 +1,6 @@
 package tests
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
 	neturl "net/url"
@@ -11,13 +10,10 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+// addTask создаёт задачу через API и возвращает её ID.
 func addTask(t *testing.T, task task) string {
-	ret, err := postJSON("api/task", map[string]any{
-		"date":    task.date,
-		"title":   task.title,
-		"comment": task.comment,
-		"repeat":  task.repeat,
-	}, http.MethodPost)
+	t.Helper()
+	ret, err := postJSON("api/task", task.fields(), http.MethodPost)
 	assert.NoError(t, err)
 	assert.NotNil(t, ret["id"])
 	id := fmt.Sprint(ret["id"])
@@ -25,23 +21,21 @@ func addTask(t *testing.T, task task) string {
 	return id
 }
 
+// getTasks получает список задач с закодированной строкой поиска.
 func getTasks(t *testing.T, search string) []map[string]string {
+	t.Helper()
 	url := "api/tasks"
 	if Search {
 		url += "?search=" + neturl.QueryEscape(search)
 	}
-	body, err := requestJSON(url, nil, http.MethodGet)
-	assert.NoError(t, err)
-
 	var m map[string][]map[string]string
-	err = json.Unmarshal(body, &m)
+	err := readJSON(url, nil, http.MethodGet, &m)
 	assert.NoError(t, err)
 	return m["tasks"]
 }
 
 func TestTasks(t *testing.T) {
 	db := openDB(t)
-	defer db.Close()
 
 	now := time.Now()
 	_, err := db.Exec("DELETE FROM scheduler")

@@ -3,10 +3,8 @@ package tests
 import (
 	"encoding/json"
 	"io"
-	"net/http"
 	"strings"
 	"testing"
-	"time"
 )
 
 // TestAPIStatusCodes проверяет ошибки API по HTTP-кодам и JSON.
@@ -25,16 +23,11 @@ func TestAPIStatusCodes(t *testing.T) {
 	}
 	for _, item := range cases {
 		t.Run(item.name, func(t *testing.T) {
-			request, err := http.NewRequest(item.method, getURL(item.path), strings.NewReader(item.body))
-			if err != nil {
-				t.Fatal(err)
-			}
-			request.Header.Set("Content-Type", "application/json")
+			token := ""
 			if item.cookie {
-				request.AddCookie(&http.Cookie{Name: "token", Value: Token})
+				token = Token
 			}
-			client := http.Client{Timeout: 5 * time.Second}
-			response, err := client.Do(request)
+			response, err := sendRequest(item.method, item.path, strings.NewReader(item.body), token)
 			if err != nil {
 				t.Fatal(err)
 			}

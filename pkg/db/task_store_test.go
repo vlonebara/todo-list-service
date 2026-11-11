@@ -12,16 +12,19 @@ import (
 // testStore создаёт отдельное хранилище для каждого теста.
 func testStore(t *testing.T) TaskStore {
 	t.Helper()
-	database, err := OpenDatabase(filepath.Join(t.TempDir(), "test.db"))
+	database := openTestDatabase(t, filepath.Join(t.TempDir(), "test.db"))
+	return NewTaskStore(database)
+}
+
+// addTestTask сохраняет исходную задачу теста и возвращает её с выданным ID.
+func addTestTask(t *testing.T, store TaskStore, task model.Task) model.Task {
+	t.Helper()
+	id, err := store.Add(t.Context(), task)
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() {
-		if err := database.Close(); err != nil {
-			t.Error(err)
-		}
-	})
-	return NewTaskStore(database)
+	task.ID = id
+	return task
 }
 
 // TestTaskStoreCanceledRequest проверяет отмену записи без изменения БД.

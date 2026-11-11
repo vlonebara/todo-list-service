@@ -11,10 +11,7 @@ import (
 // TestBackupRestore проверяет восстановление задач и истории из копии.
 func TestBackupRestore(t *testing.T) {
 	store := testStore(t)
-	id, err := store.Add(t.Context(), model.Task{Date: "20300101", Title: "saved task"})
-	if err != nil {
-		t.Fatal(err)
-	}
+	saved := addTestTask(t, store, model.Task{Date: "20300101", Title: "saved task"})
 	backup := filepath.Join(t.TempDir(), "backup.db")
 	if err := Backup(t.Context(), store.db, backup); err != nil {
 		t.Fatal(err)
@@ -33,13 +30,9 @@ func TestBackupRestore(t *testing.T) {
 	if err := Restore(t.Context(), backup, destination); err == nil {
 		t.Fatal("restore overwrote an existing file")
 	}
-	database, err := OpenDatabase(destination)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer database.Close()
+	database := openTestDatabase(t, destination)
 	restored := NewTaskStore(database)
-	task, err := restored.Get(t.Context(), id)
+	task, err := restored.Get(t.Context(), saved.ID)
 	if err != nil || task.Title != "saved task" {
 		t.Fatalf("task was not restored: %v", err)
 	}
