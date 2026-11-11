@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"testing"
 
@@ -14,15 +13,8 @@ import (
 )
 
 func getURL(path string) string {
-	port := Port
-	envPort := os.Getenv("TODO_PORT")
-	if len(envPort) > 0 {
-		if eport, err := strconv.ParseInt(envPort, 10, 32); err == nil {
-			port = int(eport)
-		}
-	}
 	path = strings.TrimPrefix(strings.ReplaceAll(path, `\`, `/`), `../web/`)
-	return fmt.Sprintf("http://localhost:%d/%s", port, path)
+	return fmt.Sprintf("http://localhost:%d/%s", Port, path)
 }
 
 func getBody(path string) ([]byte, error) {

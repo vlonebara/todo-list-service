@@ -13,14 +13,14 @@ import (
 )
 
 // testHandler собирает обработчики с отдельной БД и учебным паролем.
-func testHandler(t *testing.T) http.Handler {
+func testHandler(t *testing.T, password string) http.Handler {
 	t.Helper()
 	database, err := db.OpenDatabase(filepath.Join(t.TempDir(), "test.db"))
 	if err != nil {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = database.Close() })
-	authentication, err := service.NewAuthService("test-password", "")
+	authentication, err := service.NewAuthService(password, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -29,7 +29,7 @@ func testHandler(t *testing.T) http.Handler {
 
 // TestAuthentication проверяет вход, защищённую cookie и выход.
 func TestAuthentication(t *testing.T) {
-	handler := testHandler(t)
+	handler := testHandler(t, "test-password")
 	request := httptest.NewRequest(http.MethodPost, "/api/signin", strings.NewReader(`{"password":"test-password"}`))
 	request.Header.Set("Content-Type", "application/json")
 	response := httptest.NewRecorder()
@@ -72,7 +72,7 @@ func TestAuthentication(t *testing.T) {
 
 // TestRequestProtection проверяет отказ для чужого сайта и неверного JSON.
 func TestRequestProtection(t *testing.T) {
-	handler := testHandler(t)
+	handler := testHandler(t, "test-password")
 	cases := []struct {
 		name, body, contentType, origin string
 		status                          int
@@ -113,5 +113,30 @@ func TestSigninLimiter(t *testing.T) {
 	}
 	if !limiter.allow("client", now.Add(time.Minute)) {
 		t.Fatal("expired limit was not reset")
+	}
+}
+
+// TestLocalHostProtection блокирует DNS-имя постороннего сайта в режиме без пароля.
+func TestLocalHostProtection(t *testing.T) {
+	handler := testHandler(t, "")
+	for _, item := range []struct {
+		name, host string
+		status     int
+	}{
+		{"localhost", "localhost:7540", 200},
+		{"loopback ipv4", "127.0.0.1:7540", 200},
+		{"loopback ipv6", "[::1]:7540", 200},
+		{"external name", "other.example:7540", 403},
+		{"misleading name", "localhost.other.example:7540", 403},
+	} {
+		t.Run(item.name, func(t *testing.T) {
+			request := httptest.NewRequest(http.MethodGet, "/api/tasks", nil)
+			request.Host = item.host
+			response := httptest.NewRecorder()
+			handler.ServeHTTP(response, request)
+			if response.Code != item.status {
+				t.Fatalf("got %d, want %d", response.Code, item.status)
+			}
+		})
 	}
 }

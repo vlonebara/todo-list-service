@@ -75,6 +75,9 @@ func checkUndoState(ctx context.Context, tx *sql.Tx, change model.TaskChange) er
 		return model.ErrConflict
 	}
 	if err != nil {
+		if errors.Is(err, model.ErrTaskNotFound) {
+			return model.ErrConflict
+		}
 		return err
 	}
 	if current != *change.After {

@@ -3,6 +3,7 @@ package db
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 
 	"github.com/vlonebara/todo-list/pkg/model"
@@ -79,6 +80,9 @@ func (s TaskStore) Delete(ctx context.Context, id int64) error {
 func (s TaskStore) Complete(ctx context.Context, original model.Task, date string) error {
 	tx, before, err := s.beginChange(ctx, original.ID)
 	if err != nil {
+		if errors.Is(err, model.ErrTaskNotFound) {
+			return model.ErrConflict
+		}
 		return err
 	}
 	defer tx.Rollback()

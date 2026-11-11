@@ -56,12 +56,6 @@ func runTests(m *testing.M) (int, error) {
 	if err != nil {
 		return 1, err
 	}
-	if err := os.Setenv("TODO_PORT", port); err != nil {
-		return 1, err
-	}
-	if err := os.Setenv("TODO_DBFILE", DBFile); err != nil {
-		return 1, err
-	}
 	Token, err = testToken(server.URL)
 	if err != nil {
 		return 1, err

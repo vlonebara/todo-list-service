@@ -5,6 +5,11 @@ const form = document.querySelector("#login-form");
 const submit = document.querySelector("#signin");
 const message = document.querySelector("#login-error");
 
+// Переключатель сохраняет возможность посмотреть вводимый пароль.
+document.querySelector("#show-password").addEventListener("change", event => {
+	form.elements.password.type = event.currentTarget.checked ? "text" : "password";
+});
+
 // signin отправляет пароль, а защищённую cookie устанавливает сервер.
 function signin(event) {
     event.preventDefault();

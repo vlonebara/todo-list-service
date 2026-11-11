@@ -1,4 +1,4 @@
-import { request, query } from "./api.js";
+import { request, query, pageSize } from "./api.js";
 import { createTaskForm } from "./task_form.js";
 import { renderTasks } from "./task_list.js";
 import { renderHistory } from "./history.js";
@@ -31,7 +31,7 @@ async function loadTasks(reset = true) {
     tasks = reset ? result.tasks : [...tasks, ...result.tasks];
     page = nextPage;
     renderTasks(taskContainer, tasks, actions);
-    more.hidden = result.tasks.length < 15;
+    more.hidden = result.tasks.length < pageSize;
     document.querySelector("#task-count").textContent = `Показано задач: ${tasks.length}`;
 }
 
@@ -44,7 +44,7 @@ async function loadHistory(reset = true) {
     changes = reset ? result.history : [...changes, ...result.history];
     historyPage = nextPage;
     renderHistory(historyContainer, changes);
-    moreHistory.hidden = result.history.length < 15;
+    moreHistory.hidden = result.history.length < pageSize;
 }
 
 // refresh обновляет данные после одного завершённого действия.
@@ -124,6 +124,9 @@ document.querySelector("#search-form").addEventListener("submit", event => {
     runAction(document.querySelector("#find"), message, () => loadTasks());
 });
 period.addEventListener("change", () => loadTasks().catch(error => showMessage(message, error.message, true)));
+search.addEventListener("input", () => {
+    if (!search.value) loadTasks().catch(error => showMessage(message, error.message, true));
+});
 request("session").then(session => {
     document.querySelector("#signout").hidden = !session.required;
 }).catch(error => showMessage(message, error.message, true));

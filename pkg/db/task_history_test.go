@@ -124,3 +124,18 @@ func TestHistoryFailureRollback(t *testing.T) {
 		t.Fatalf("failed action changed task: %v, %v", got, err)
 	}
 }
+
+// TestUndoDeletedTaskConflict не восстанавливает задачу поверх внешнего удаления.
+func TestUndoDeletedTaskConflict(t *testing.T) {
+	store := testStore(t)
+	id, err := store.Add(t.Context(), model.Task{Date: "20300101", Title: "test"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := store.db.Exec(`DELETE FROM scheduler WHERE id = ?`, id); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.Undo(t.Context()); !errors.Is(err, model.ErrConflict) {
+		t.Fatalf("expected conflict, got %v", err)
+	}
+}

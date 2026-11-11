@@ -45,5 +45,9 @@ func New(tasks TaskService, authentication AuthService, secureCookies bool, webD
 	protection.SetDenyHandler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		writeAPIError(w, http.StatusForbidden, "cross-origin request is not allowed")
 	}))
-	return securityHeaders(protection.Handler(mux))
+	var handler http.Handler = protection.Handler(mux)
+	if !authentication.Enabled() {
+		handler = localRequestsOnly(handler)
+	}
+	return securityHeaders(handler)
 }

@@ -70,6 +70,7 @@ dialog::backdrop { background: #17223880; }
 .login-card { width: min(420px, calc(100% - 2rem)); padding: 2rem; background: #fff; border: 1px solid #d9dee7; border-radius: 10px; }
 .login-card h1 { margin-bottom: .5rem; }
 .login-card button { width: 100%; margin-top: 1rem; }
+.login-options { margin-top: .7rem; font-size: .9rem; }
 .visually-hidden { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 
 @media (max-width: 650px) {

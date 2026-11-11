@@ -7,18 +7,16 @@ import (
 	"time"
 )
 
-const dateLayout = "20060102"
-
 // NextDate возвращает ближайшую дату повторения позже now.
 func NextDate(now time.Time, dstart, repeat string) (string, error) {
 	if len(repeat) > 128 {
 		return "", fmt.Errorf("repeat rule must not exceed 128 characters")
 	}
-	start, err := time.Parse(dateLayout, dstart)
+	start, err := ParseDate(dstart)
 	if err != nil {
 		return "", err
 	}
-	if start.Year() < 1 || now.Year() < 1 || now.Year() > 9999 {
+	if now.Year() < 1 || now.Year() > 9999 {
 		return "", fmt.Errorf("date year must be between 1 and 9999")
 	}
 

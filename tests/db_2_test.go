@@ -1,7 +1,6 @@
 package tests
 
 import (
-	"os"
 	"testing"
 	"time"
 
@@ -25,12 +24,7 @@ func count(db *sqlx.DB) (int, error) {
 }
 
 func openDB(t *testing.T) *sqlx.DB {
-	dbfile := DBFile
-	envFile := os.Getenv("TODO_DBFILE")
-	if len(envFile) > 0 {
-		dbfile = envFile
-	}
-	db, err := sqlx.Connect("sqlite", dbfile)
+	db, err := sqlx.Connect("sqlite", DBFile)
 	if err != nil {
 		t.Fatal(err)
 	}

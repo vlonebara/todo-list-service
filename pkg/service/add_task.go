@@ -44,12 +44,8 @@ func prepareTaskDate(date, title, repeat string, now time.Time) (string, error) 
 	if date == "" {
 		date = today
 	}
-	parsed, err := time.Parse(dateLayout, date)
-	if err != nil {
-		return "", fmt.Errorf("%w: invalid date: %v", model.ErrInvalidTask, err)
-	}
-	if parsed.Year() < 1 {
-		return "", fmt.Errorf("%w: date year must be between 1 and 9999", model.ErrInvalidTask)
+	if _, err := ParseDate(date); err != nil {
+		return "", fmt.Errorf("%w: %v", model.ErrInvalidTask, err)
 	}
 
 	if repeat != "" {

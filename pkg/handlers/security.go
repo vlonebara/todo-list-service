@@ -1,9 +1,26 @@
 package handlers
 
 import (
+	"net"
 	"net/http"
 	"strings"
 )
+
+// localRequestsOnly не позволяет чужому DNS-имени обращаться к API без пароля.
+func localRequestsOnly(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		host := r.Host
+		if address, _, err := net.SplitHostPort(host); err == nil {
+			host = address
+		}
+		host = strings.Trim(host, "[]")
+		if !strings.EqualFold(host, "localhost") && !net.ParseIP(host).IsLoopback() {
+			writeAPIError(w, http.StatusForbidden, "local access requires a localhost address")
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
 
 // securityHeaders добавляет общие заголовки защиты и запрещает кешировать API.
 func securityHeaders(next http.Handler) http.Handler {

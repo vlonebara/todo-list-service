@@ -1,3 +1,6 @@
+// pageSize соответствует размеру страницы HTTP API.
+export const pageSize = 15;
+
 // request отправляет JSON-запрос и возвращает понятную ошибку сервера.
 export async function request(path, { method = "GET", body, redirect = true } = {}) {
     const controller = new AbortController();
