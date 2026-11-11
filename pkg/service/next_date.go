@@ -5,15 +5,21 @@ import (
 	"strconv"
 	"strings"
 	"time"
-)
 
-const dateLayout = "20060102"
+	"github.com/vlonebara/todo-list/pkg/errutil"
+)
 
 // NextDate возвращает ближайшую дату повторения позже now.
 func NextDate(now time.Time, dstart, repeat string) (string, error) {
-	start, err := time.Parse(dateLayout, dstart)
-	if err != nil {
+	if len(repeat) > 128 {
+		return "", fmt.Errorf("repeat rule must not exceed 128 characters")
+	}
+	start, err := ParseDate(dstart)
+	if errutil.CheckError(err) {
 		return "", err
+	}
+	if now.Year() < 1 || now.Year() > 9999 {
+		return "", fmt.Errorf("date year must be between 1 and 9999")
 	}
 
 	rule := strings.Fields(repeat)
@@ -34,8 +40,11 @@ func NextDate(now time.Time, dstart, repeat string) (string, error) {
 	default:
 		err = fmt.Errorf("unsupported repeat rule %q", rule[0])
 	}
-	if err != nil {
+	if errutil.CheckError(err) {
 		return "", err
+	}
+	if next.Year() > 9999 {
+		return "", fmt.Errorf("next date is outside the supported range")
 	}
 	return next.Format(dateLayout), nil
 }
@@ -46,7 +55,7 @@ func nextByDays(start, now time.Time, rule []string) (time.Time, error) {
 		return time.Time{}, fmt.Errorf("day rule must have one interval")
 	}
 	interval, err := strconv.Atoi(rule[1])
-	if err != nil || interval < 1 || interval > 400 {
+	if errutil.CheckError(err) || interval < 1 || interval > 400 {
 		return time.Time{}, fmt.Errorf("day interval must be between 1 and 400")
 	}
 	return nextByInterval(start, now, 0, interval), nil
@@ -60,13 +69,25 @@ func nextByYears(start, now time.Time, rule []string) (time.Time, error) {
 	return nextByInterval(start, now, 1, 0), nil
 }
 
-// nextByInterval прибавляет интервал до даты, которая позже now.
+// nextByInterval пропускает прошедшие интервалы без перебора каждого дня.
 func nextByInterval(start, now time.Time, years, days int) time.Time {
-	for date := start.AddDate(years, 0, days); ; date = date.AddDate(years, 0, days) {
-		if afterNow(date, now) {
-			return date
+	if days > 0 {
+		passedDays := (dateOnly(now).Unix() - start.Unix()) / 86400
+		intervals := int(passedDays)/days + 1
+		if intervals < 1 {
+			intervals = 1
 		}
+		return start.AddDate(0, 0, intervals*days)
 	}
+	// Первый перенос сохраняет переход 29 февраля на 1 марта.
+	date := start.AddDate(years, 0, 0)
+	if skipped := now.Year() - date.Year(); skipped > 0 {
+		date = date.AddDate(skipped, 0, 0)
+	}
+	if !afterNow(date, now) {
+		date = date.AddDate(1, 0, 0)
+	}
+	return date
 }
 
 // nextByWeekdays ищет ближайший указанный день недели.
@@ -75,7 +96,7 @@ func nextByWeekdays(start, now time.Time, rule []string) (time.Time, error) {
 		return time.Time{}, fmt.Errorf("weekday rule must have one weekday list")
 	}
 	values, err := parseNumbers(rule[1], 1, 7)
-	if err != nil {
+	if errutil.CheckError(err) {
 		return time.Time{}, err
 	}
 
@@ -84,10 +105,7 @@ func nextByWeekdays(start, now time.Time, rule []string) (time.Time, error) {
 		weekdays[day] = true
 	}
 
-	date := start
-	if !afterNow(date.AddDate(0, 0, 1), now) {
-		date = dateOnly(now)
-	}
+	date := repeatSearchStart(start, now)
 	for {
 		date = date.AddDate(0, 0, 1)
 		if weekdays[weekdayNumber(date)] {
@@ -102,7 +120,7 @@ func nextByMonths(start, now time.Time, rule []string) (time.Time, error) {
 		return time.Time{}, fmt.Errorf("month rule must have day and optional month lists")
 	}
 	values, err := parseNumbers(rule[1], -2, 31)
-	if err != nil {
+	if errutil.CheckError(err) {
 		return time.Time{}, fmt.Errorf("invalid day list in month rule")
 	}
 
@@ -127,7 +145,7 @@ func nextByMonths(start, now time.Time, rule []string) (time.Time, error) {
 	}
 	if len(rule) == 3 {
 		values, err = parseNumbers(rule[2], 1, 12)
-		if err != nil {
+		if errutil.CheckError(err) {
 			return time.Time{}, fmt.Errorf("invalid month list in month rule")
 		}
 		months = [13]bool{}
@@ -139,10 +157,7 @@ func nextByMonths(start, now time.Time, rule []string) (time.Time, error) {
 		return time.Time{}, fmt.Errorf("month rule has no possible date")
 	}
 
-	date := start
-	if !afterNow(date.AddDate(0, 0, 1), now) {
-		date = dateOnly(now)
-	}
+	date := repeatSearchStart(start, now)
 	for {
 		date = date.AddDate(0, 0, 1)
 		if !months[int(date.Month())] {
@@ -154,6 +169,14 @@ func nextByMonths(start, now time.Time, rule []string) (time.Time, error) {
 			return date, nil
 		}
 	}
+}
+
+// repeatSearchStart пропускает прошедшие дни перед поиском календарного повторения.
+func repeatSearchStart(start, now time.Time) time.Time {
+	if !afterNow(start.AddDate(0, 0, 1), now) {
+		return dateOnly(now)
+	}
+	return start
 }
 
 // monthRuleHasDate проверяет, что правило может совпасть с календарной датой.
@@ -186,7 +209,7 @@ func parseNumbers(value string, min, max int) ([]int, error) {
 	numbers := make([]int, 0, len(items))
 	for _, item := range items {
 		number, err := strconv.Atoi(item)
-		if err != nil || number < min || number > max {
+		if errutil.CheckError(err) || number < min || number > max {
 			return nil, fmt.Errorf("invalid value %q", item)
 		}
 		numbers = append(numbers, number)
@@ -196,7 +219,7 @@ func parseNumbers(value string, min, max int) ([]int, error) {
 
 // afterNow сравнивает календарные даты без учёта времени суток.
 func afterNow(date, now time.Time) bool {
-	return date.Format(dateLayout) > now.Format(dateLayout)
+	return dateOnly(date).After(dateOnly(now))
 }
 
 // dateOnly возвращает дату без времени суток.

@@ -15,6 +15,15 @@ type taskData struct {
 	Repeat  string `json:"repeat"`
 }
 
+// taskSnapshot преобразует снимок истории, сохраняя отсутствие задачи как null.
+func taskSnapshot(task *model.Task) *taskData {
+	if task == nil {
+		return nil
+	}
+	response := taskToResponse(*task)
+	return &response
+}
+
 // taskToResponse преобразует задачу сервиса в JSON-формат API.
 func taskToResponse(task model.Task) taskData {
 	return taskData{

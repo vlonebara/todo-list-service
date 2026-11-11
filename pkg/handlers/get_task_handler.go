@@ -1,12 +1,16 @@
 package handlers
 
-import "net/http"
+import (
+	"net/http"
+
+	"github.com/vlonebara/todo-list/pkg/errutil"
+)
 
 // getTaskHandler возвращает данные задачи с указанным ID.
 func (h Handler) getTaskHandler(w http.ResponseWriter, r *http.Request) {
-	task, err := h.tasks.GetTask(r.URL.Query().Get("id"))
-	if err != nil {
-		writeAPIError(w, http.StatusBadRequest, err.Error())
+	task, err := h.tasks.GetTask(r.Context(), r.URL.Query().Get("id"))
+	if errutil.CheckError(err) {
+		writeTaskError(w, err)
 		return
 	}
 

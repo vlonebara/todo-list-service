@@ -6,28 +6,22 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+
+	"github.com/vlonebara/todo-list/pkg/errutil"
 )
 
 func getURL(path string) string {
-	port := Port
-	envPort := os.Getenv("TODO_PORT")
-	if len(envPort) > 0 {
-		if eport, err := strconv.ParseInt(envPort, 10, 32); err == nil {
-			port = int(eport)
-		}
-	}
 	path = strings.TrimPrefix(strings.ReplaceAll(path, `\`, `/`), `../web/`)
-	return fmt.Sprintf("http://localhost:%d/%s", port, path)
+	return fmt.Sprintf("http://localhost:%d/%s", Port, path)
 }
 
 func getBody(path string) ([]byte, error) {
 	resp, err := http.Get(getURL(path))
-	if err != nil {
+	if errutil.CheckError(err) {
 		return nil, err
 	}
 	defer resp.Body.Close()
@@ -37,18 +31,18 @@ func getBody(path string) ([]byte, error) {
 
 func walkDir(path string, f func(fname string) error) error {
 	dirs, err := os.ReadDir(path)
-	if err != nil {
+	if errutil.CheckError(err) {
 		return err
 	}
 	for _, v := range dirs {
 		fname := filepath.Join(path, v.Name())
 		if v.IsDir() {
-			if err = walkDir(fname, f); err != nil {
+			if err = walkDir(fname, f); errutil.CheckError(err) {
 				return err
 			}
 			continue
 		}
-		if err = f(fname); err != nil {
+		if err = f(fname); errutil.CheckError(err) {
 			return err
 		}
 	}
@@ -58,11 +52,11 @@ func walkDir(path string, f func(fname string) error) error {
 func TestApp(t *testing.T) {
 	cmp := func(fname string) error {
 		fbody, err := os.ReadFile(fname)
-		if err != nil {
+		if errutil.CheckError(err) {
 			return err
 		}
 		body, err := getBody(fname)
-		if err != nil {
+		if errutil.CheckError(err) {
 			return err
 		}
 		assert.Equal(t, len(fbody), len(body), `сервер возвращает для %s данные другого размера`, fname)

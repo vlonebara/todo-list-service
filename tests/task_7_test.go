@@ -1,7 +1,6 @@
 package tests
 
 import (
-	"encoding/json"
 	"net/http"
 	"testing"
 	"time"
@@ -9,11 +8,10 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+// notFoundTask проверяет ошибку API после удаления задачи.
 func notFoundTask(t *testing.T, id string) {
-	body, err := requestJSON("api/task?id="+id, nil, http.MethodGet)
-	assert.NoError(t, err)
-	var m map[string]any
-	err = json.Unmarshal(body, &m)
+	t.Helper()
+	m, err := postJSON("api/task?id="+id, nil, http.MethodGet)
 	assert.NoError(t, err)
 	_, ok := m["error"]
 	assert.True(t, ok)
@@ -21,7 +19,6 @@ func notFoundTask(t *testing.T, id string) {
 
 func TestDone(t *testing.T) {
 	db := openDB(t)
-	defer db.Close()
 
 	now := time.Now()
 	id := addTask(t, task{
@@ -44,17 +41,13 @@ func TestDone(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Empty(t, ret)
 
-		var task Task
-		err = db.Get(&task, `SELECT * FROM scheduler WHERE id=?`, id)
-		assert.NoError(t, err)
+		task := getDBTask(t, db, id)
 		now = now.AddDate(0, 0, 3)
 		assert.Equal(t, now.Format(`20060102`), task.Date)
 	}
 }
 
 func TestDelTask(t *testing.T) {
-	db := openDB(t)
-	defer db.Close()
 
 	id := addTask(t, task{
 		title:  "Временная задача",

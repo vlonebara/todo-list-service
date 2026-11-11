@@ -1,0 +1,67 @@
+name: checks
+
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  go:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: '1.26.x'
+          check-latest: true
+      - name: formatting
+        run: test -z "$(gofmt -l cmd pkg tests)"
+      - name: static checks
+        run: go vet ./...
+      - name: tests
+        run: go test -race ./... -count=1
+      - name: build
+        run: go build -trimpath -o /tmp/todo-list ./cmd
+      - name: vulnerabilities
+        run: go run golang.org/x/vuln/cmd/govulncheck@v1.9.0 ./...
+
+  container:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: build image
+        run: docker build --pull -t todo-list:ci .
+      - name: start container
+        run: >-
+          docker run -d --name todo-ci
+          -e TODO_PASSWORD=ci-test-password
+          -e TODO_COOKIE_SECURE=false
+          -p 127.0.0.1:7540:7540 todo-list:ci
+      - name: readiness
+        run: |
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:7540/api/health; then
+              test "$(docker exec todo-ci id -u)" -ne 0
+              exit 0
+            fi
+            sleep 1
+          done
+          docker logs todo-ci
+          exit 1
+      - name: image vulnerabilities
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: todo-list:ci
+          scanners: vuln
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: '1'
+      - name: stop test container
+        if: always()
+        run: docker rm -f todo-ci || true

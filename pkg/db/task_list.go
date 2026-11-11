@@ -1,44 +1,91 @@
 package db
 
 import (
+	"context"
+	"database/sql"
 	"fmt"
+	"strings"
 
+	"github.com/vlonebara/todo-list/pkg/errutil"
 	"github.com/vlonebara/todo-list/pkg/model"
 )
 
-// List возвращает до 15 задач по дате или тексту поиска.
-func (s TaskStore) List(filter model.TaskFilter) ([]model.Task, error) {
+const taskFields = `SELECT id, date, title, comment, repeat FROM scheduler`
+
+// List возвращает страницу задач с поиском без учёта регистра, включая кириллицу.
+func (s TaskStore) List(ctx context.Context, filter model.TaskFilter) ([]model.Task, error) {
 	query, args := tasksListQuery(filter)
-	rows, err := s.db.Query(query, args...)
-	if err != nil {
+	skip := filter.Offset
+	if filter.Text == "" {
+		query += ` LIMIT ? OFFSET ?`
+		args = append(args, model.PageSize, filter.Offset)
+		skip = 0
+	}
+	rows, err := s.db.QueryContext(ctx, query, args...)
+	if errutil.CheckError(err) {
 		return nil, fmt.Errorf("get tasks: %w", err)
 	}
 	defer rows.Close()
+	return readTasks(rows, filter.Text, skip, model.PageSize)
+}
 
-	tasks := make([]model.Task, 0, 15)
+// All возвращает все задачи для выгрузки пользователем.
+func (s TaskStore) All(ctx context.Context) ([]model.Task, error) {
+	rows, err := s.db.QueryContext(ctx, taskFields+` ORDER BY date, id`)
+	if errutil.CheckError(err) {
+		return nil, fmt.Errorf("export tasks: %w", err)
+	}
+	defer rows.Close()
+	return readTasks(rows, "", 0, 0)
+}
+
+// readTasks читает строки и применяет текстовый поиск до разбиения на страницы.
+func readTasks(rows *sql.Rows, search string, skip, limit int) ([]model.Task, error) {
+	tasks := make([]model.Task, 0, model.PageSize)
+	search = strings.ToLower(search)
 	for rows.Next() {
-		var task model.Task
-		if err := rows.Scan(&task.ID, &task.Date, &task.Title, &task.Comment, &task.Repeat); err != nil {
-			return nil, fmt.Errorf("read task: %w", err)
+		task, err := scanTask(rows)
+		if errutil.CheckError(err) {
+			return nil, err
+		}
+		// Встроенный SQLite LIKE не меняет регистр русских букв.
+		if search != "" && !strings.Contains(strings.ToLower(task.Title), search) && !strings.Contains(strings.ToLower(task.Comment), search) {
+			continue
+		}
+		if skip > 0 {
+			skip--
+			continue
 		}
 		tasks = append(tasks, task)
+		if limit > 0 && len(tasks) == limit {
+			break
+		}
 	}
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("read tasks: %w", err)
-	}
-	return tasks, nil
+	return tasks, rows.Err()
 }
 
-// tasksListQuery строит запрос для списка, даты или текстового поиска.
+// tasksListQuery строит параметризованный запрос по календарным границам.
 func tasksListQuery(filter model.TaskFilter) (string, []any) {
-	const fields = `SELECT id, date, title, comment, repeat FROM scheduler`
-	const orderAndLimit = ` ORDER BY date, id LIMIT 15`
+	conditions := make([]string, 0, 3)
+	args := make([]any, 0, 3)
 	if filter.Date != "" {
-		return fields + ` WHERE date = ?` + orderAndLimit, []any{filter.Date}
+		conditions = append(conditions, "date = ?")
+		args = append(args, filter.Date)
 	}
-	if filter.Text != "" {
-		pattern := "%" + filter.Text + "%"
-		return fields + ` WHERE title LIKE ? OR comment LIKE ?` + orderAndLimit, []any{pattern, pattern}
+	if filter.FromDate != "" {
+		conditions = append(conditions, "date >= ?")
+		args = append(args, filter.FromDate)
 	}
-	return fields + orderAndLimit, nil
+	if filter.BeforeDate != "" {
+		conditions = append(conditions, "date < ?")
+		args = append(args, filter.BeforeDate)
+	}
+	query := taskFields
+	if len(conditions) > 0 {
+		query += " WHERE " + strings.Join(conditions, " AND ")
+	}
+	return query + ` ORDER BY date, id`, args
 }
+
+// Ping проверяет доступность общего соединения с БД.
+func (s TaskStore) Ping(ctx context.Context) error { return s.db.PingContext(ctx) }

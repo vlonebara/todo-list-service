@@ -1,10 +1,12 @@
 package db
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"fmt"
 
+	"github.com/vlonebara/todo-list/pkg/errutil"
 	"github.com/vlonebara/todo-list/pkg/model"
 )
 
@@ -19,74 +21,91 @@ func NewTaskStore(database *sql.DB) TaskStore {
 }
 
 // Add сохраняет задачу и возвращает её ID.
-func (s TaskStore) Add(task model.Task) (int64, error) {
-	result, err := s.db.Exec(
+func (s TaskStore) Add(ctx context.Context, task model.Task) (int64, error) {
+	tx, _, err := s.beginChange(ctx, 0)
+	if errutil.CheckError(err) {
+		return 0, err
+	}
+	defer tx.Rollback()
+	result, err := tx.ExecContext(ctx,
 		`INSERT INTO scheduler (date, title, comment, repeat) VALUES (?, ?, ?, ?)`,
-		task.Date, task.Title, task.Comment, task.Repeat,
-	)
-	if err != nil {
+		task.Date, task.Title, task.Comment, task.Repeat)
+	if errutil.CheckError(err) {
 		return 0, fmt.Errorf("insert task: %w", err)
 	}
-	id, err := result.LastInsertId()
-	if err != nil {
+	task.ID, err = result.LastInsertId()
+	if errutil.CheckError(err) {
 		return 0, fmt.Errorf("get task id: %w", err)
 	}
-	return id, nil
+	if err := finishChange(ctx, tx, "add", nil, &task); errutil.CheckError(err) {
+		return 0, err
+	}
+	return task.ID, nil
 }
 
 // Get возвращает задачу с указанным ID.
-func (s TaskStore) Get(id int64) (model.Task, error) {
-	var task model.Task
-	err := s.db.QueryRow(
-		`SELECT id, date, title, comment, repeat FROM scheduler WHERE id = ?`, id,
-	).Scan(&task.ID, &task.Date, &task.Title, &task.Comment, &task.Repeat)
-	if errors.Is(err, sql.ErrNoRows) {
-		return model.Task{}, model.ErrTaskNotFound
-	}
-	if err != nil {
-		return model.Task{}, fmt.Errorf("get task: %w", err)
-	}
-	return task, nil
+func (s TaskStore) Get(ctx context.Context, id int64) (model.Task, error) {
+	return scanTask(s.db.QueryRowContext(ctx, taskByID, id))
 }
 
 // Update сохраняет новые значения полей задачи.
-func (s TaskStore) Update(task model.Task) error {
-	result, err := s.db.Exec(
+func (s TaskStore) Update(ctx context.Context, task model.Task) error {
+	tx, before, err := s.beginChange(ctx, task.ID)
+	if errutil.CheckError(err) {
+		return err
+	}
+	defer tx.Rollback()
+	_, err = tx.ExecContext(ctx,
 		`UPDATE scheduler SET date = ?, title = ?, comment = ?, repeat = ? WHERE id = ?`,
-		task.Date, task.Title, task.Comment, task.Repeat, task.ID,
-	)
-	if err != nil {
+		task.Date, task.Title, task.Comment, task.Repeat, task.ID)
+	if errutil.CheckError(err) {
 		return fmt.Errorf("update task: %w", err)
 	}
-	return checkTaskChanged(result)
+	return finishChange(ctx, tx, "edit", before, &task)
 }
 
 // Delete удаляет задачу с указанным ID.
-func (s TaskStore) Delete(id int64) error {
-	result, err := s.db.Exec(`DELETE FROM scheduler WHERE id = ?`, id)
-	if err != nil {
+func (s TaskStore) Delete(ctx context.Context, id int64) error {
+	tx, before, err := s.beginChange(ctx, id)
+	if errutil.CheckError(err) {
+		return err
+	}
+	defer tx.Rollback()
+	if err := deleteTask(ctx, tx, id); errutil.CheckError(err) {
 		return fmt.Errorf("delete task: %w", err)
 	}
-	return checkTaskChanged(result)
+	return finishChange(ctx, tx, "delete", before, nil)
 }
 
-// SetDate записывает дату следующего выполнения задачи.
-func (s TaskStore) SetDate(id int64, date string) error {
-	result, err := s.db.Exec(`UPDATE scheduler SET date = ? WHERE id = ?`, date, id)
-	if err != nil {
-		return fmt.Errorf("update task date: %w", err)
+// Complete меняет только ту задачу, на основе которой была рассчитана дата.
+func (s TaskStore) Complete(ctx context.Context, original model.Task, date string) error {
+	tx, before, err := s.beginChange(ctx, original.ID)
+	if errutil.CheckError(err) {
+		if errors.Is(err, model.ErrTaskNotFound) {
+			return model.ErrConflict
+		}
+		return err
 	}
-	return checkTaskChanged(result)
+	defer tx.Rollback()
+	if *before != original {
+		return model.ErrConflict
+	}
+	var after *model.Task
+	if date == "" {
+		err = deleteTask(ctx, tx, original.ID)
+	} else {
+		_, err = tx.ExecContext(ctx, `UPDATE scheduler SET date = ? WHERE id = ?`, date, original.ID)
+		original.Date = date
+		after = &original
+	}
+	if errutil.CheckError(err) {
+		return fmt.Errorf("complete task: %w", err)
+	}
+	return finishChange(ctx, tx, "complete", before, after)
 }
 
-// checkTaskChanged проверяет, что запрос затронул существующую задачу.
-func checkTaskChanged(result sql.Result) error {
-	changed, err := result.RowsAffected()
-	if err != nil {
-		return fmt.Errorf("check changed task: %w", err)
-	}
-	if changed == 0 {
-		return model.ErrTaskNotFound
-	}
-	return nil
+// deleteTask удаляет строку внутри уже открытой транзакции изменения задачи.
+func deleteTask(ctx context.Context, tx *sql.Tx, id int64) error {
+	_, err := tx.ExecContext(ctx, `DELETE FROM scheduler WHERE id = ?`, id)
+	return err
 }
