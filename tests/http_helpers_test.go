@@ -6,12 +6,14 @@ import (
 	"io"
 	"net/http"
 	"time"
+
+	"github.com/vlonebara/todo-list/pkg/errutil"
 )
 
 // sendRequest отправляет запрос с общими заголовками, таймаутом и выбранным токеном.
 func sendRequest(method, path string, body io.Reader, token string) (*http.Response, error) {
 	request, err := http.NewRequest(method, getURL(path), body)
-	if err != nil {
+	if errutil.CheckError(err) {
 		return nil, err
 	}
 	request.Header.Set("Content-Type", "application/json")
@@ -28,12 +30,12 @@ func requestJSON(path string, values map[string]any, method string) ([]byte, err
 	if len(values) > 0 {
 		var err error
 		data, err = json.Marshal(values)
-		if err != nil {
+		if errutil.CheckError(err) {
 			return nil, err
 		}
 	}
 	response, err := sendRequest(method, path, bytes.NewReader(data), Token)
-	if err != nil {
+	if errutil.CheckError(err) {
 		return nil, err
 	}
 	defer response.Body.Close()
@@ -43,7 +45,7 @@ func requestJSON(path string, values map[string]any, method string) ([]byte, err
 // readJSON получает ответ API и разбирает его в указанную структуру.
 func readJSON(path string, values map[string]any, method string, result any) error {
 	body, err := requestJSON(path, values, method)
-	if err != nil {
+	if errutil.CheckError(err) {
 		return err
 	}
 	return json.Unmarshal(body, result)

@@ -4,13 +4,15 @@ import (
 	"net"
 	"net/http"
 	"strings"
+
+	"github.com/vlonebara/todo-list/pkg/errutil"
 )
 
 // localRequestsOnly не позволяет чужому DNS-имени обращаться к API без пароля.
 func localRequestsOnly(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		host := r.Host
-		if address, _, err := net.SplitHostPort(host); err == nil {
+		if address, _, err := net.SplitHostPort(host); !errutil.CheckError(err) {
 			host = address
 		}
 		host = strings.Trim(host, "[]")

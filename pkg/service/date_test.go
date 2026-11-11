@@ -1,6 +1,10 @@
 package service
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/vlonebara/todo-list/pkg/errutil"
+)
 
 // TestParseDate проверяет единые правила дат для всех входов приложения.
 func TestParseDate(t *testing.T) {
@@ -18,7 +22,7 @@ func TestParseDate(t *testing.T) {
 	} {
 		t.Run(item.name, func(t *testing.T) {
 			_, err := ParseDate(item.value)
-			if (err == nil) != item.valid {
+			if (!errutil.CheckError(err)) != item.valid {
 				t.Fatalf("unexpected result: %v", err)
 			}
 		})

@@ -3,6 +3,8 @@ package service
 import (
 	"testing"
 	"time"
+
+	"github.com/vlonebara/todo-list/pkg/errutil"
 )
 
 // TestNextDate проверяет календарные границы и давние исходные даты.
@@ -26,17 +28,17 @@ func TestNextDate(t *testing.T) {
 	for _, item := range cases {
 		t.Run(item.name, func(t *testing.T) {
 			now, err := time.Parse(dateLayout, item.now)
-			if err != nil {
+			if errutil.CheckError(err) {
 				t.Fatal(err)
 			}
 			got, err := NextDate(now, item.start, item.repeat)
 			if item.want == "" {
-				if err == nil {
+				if !errutil.CheckError(err) {
 					t.Fatalf("expected an error, got %q", got)
 				}
 				return
 			}
-			if err != nil || got != item.want {
+			if errutil.CheckError(err) || got != item.want {
 				t.Fatalf("got %q, %v; want %q", got, err, item.want)
 			}
 		})

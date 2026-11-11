@@ -5,6 +5,8 @@ import (
 	"fmt"
 
 	_ "modernc.org/sqlite"
+
+	"github.com/vlonebara/todo-list/pkg/errutil"
 )
 
 var schema = []string{
@@ -32,12 +34,12 @@ var historySchema = []string{
 // Create применяет новые версии схемы, сохраняя существующие задачи.
 func Create(database *sql.DB) error {
 	tx, err := database.Begin()
-	if err != nil {
+	if errutil.CheckError(err) {
 		return fmt.Errorf("begin migration: %w", err)
 	}
 	defer tx.Rollback()
 	var version int
-	if err := tx.QueryRow(`PRAGMA user_version`).Scan(&version); err != nil {
+	if err := tx.QueryRow(`PRAGMA user_version`).Scan(&version); errutil.CheckError(err) {
 		return fmt.Errorf("read schema version: %w", err)
 	}
 	migrations := [][]string{schema, historySchema}
@@ -46,12 +48,12 @@ func Create(database *sql.DB) error {
 	}
 	for ; version < len(migrations); version++ {
 		for _, statement := range migrations[version] {
-			if _, err := tx.Exec(statement); err != nil {
+			if _, err := tx.Exec(statement); errutil.CheckError(err) {
 				return fmt.Errorf("migrate database: %w", err)
 			}
 		}
 	}
-	if _, err := tx.Exec(fmt.Sprintf("PRAGMA user_version = %d", version)); err != nil {
+	if _, err := tx.Exec(fmt.Sprintf("PRAGMA user_version = %d", version)); errutil.CheckError(err) {
 		return fmt.Errorf("save schema version: %w", err)
 	}
 	return tx.Commit()

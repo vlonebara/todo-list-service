@@ -4,21 +4,22 @@ import (
 	"context"
 	"time"
 
+	"github.com/vlonebara/todo-list/pkg/errutil"
 	"github.com/vlonebara/todo-list/pkg/model"
 )
 
 // EditTask проверяет и сохраняет новые данные задачи.
 func (s TaskService) EditTask(ctx context.Context, id, date, title, comment, repeat string) error {
-	if err := validateTaskText(title, comment); err != nil {
+	if err := validateTaskText(title, comment); errutil.CheckError(err) {
 		return err
 	}
 	taskID, err := parseTaskID(id)
-	if err != nil {
+	if errutil.CheckError(err) {
 		return err
 	}
 
 	date, err = prepareTaskDate(date, title, repeat, time.Now())
-	if err != nil {
+	if errutil.CheckError(err) {
 		return err
 	}
 

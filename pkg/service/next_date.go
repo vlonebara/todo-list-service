@@ -5,6 +5,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/vlonebara/todo-list/pkg/errutil"
 )
 
 // NextDate возвращает ближайшую дату повторения позже now.
@@ -13,7 +15,7 @@ func NextDate(now time.Time, dstart, repeat string) (string, error) {
 		return "", fmt.Errorf("repeat rule must not exceed 128 characters")
 	}
 	start, err := ParseDate(dstart)
-	if err != nil {
+	if errutil.CheckError(err) {
 		return "", err
 	}
 	if now.Year() < 1 || now.Year() > 9999 {
@@ -38,7 +40,7 @@ func NextDate(now time.Time, dstart, repeat string) (string, error) {
 	default:
 		err = fmt.Errorf("unsupported repeat rule %q", rule[0])
 	}
-	if err != nil {
+	if errutil.CheckError(err) {
 		return "", err
 	}
 	if next.Year() > 9999 {
@@ -53,7 +55,7 @@ func nextByDays(start, now time.Time, rule []string) (time.Time, error) {
 		return time.Time{}, fmt.Errorf("day rule must have one interval")
 	}
 	interval, err := strconv.Atoi(rule[1])
-	if err != nil || interval < 1 || interval > 400 {
+	if errutil.CheckError(err) || interval < 1 || interval > 400 {
 		return time.Time{}, fmt.Errorf("day interval must be between 1 and 400")
 	}
 	return nextByInterval(start, now, 0, interval), nil
@@ -94,7 +96,7 @@ func nextByWeekdays(start, now time.Time, rule []string) (time.Time, error) {
 		return time.Time{}, fmt.Errorf("weekday rule must have one weekday list")
 	}
 	values, err := parseNumbers(rule[1], 1, 7)
-	if err != nil {
+	if errutil.CheckError(err) {
 		return time.Time{}, err
 	}
 
@@ -118,7 +120,7 @@ func nextByMonths(start, now time.Time, rule []string) (time.Time, error) {
 		return time.Time{}, fmt.Errorf("month rule must have day and optional month lists")
 	}
 	values, err := parseNumbers(rule[1], -2, 31)
-	if err != nil {
+	if errutil.CheckError(err) {
 		return time.Time{}, fmt.Errorf("invalid day list in month rule")
 	}
 
@@ -143,7 +145,7 @@ func nextByMonths(start, now time.Time, rule []string) (time.Time, error) {
 	}
 	if len(rule) == 3 {
 		values, err = parseNumbers(rule[2], 1, 12)
-		if err != nil {
+		if errutil.CheckError(err) {
 			return time.Time{}, fmt.Errorf("invalid month list in month rule")
 		}
 		months = [13]bool{}
@@ -207,7 +209,7 @@ func parseNumbers(value string, min, max int) ([]int, error) {
 	numbers := make([]int, 0, len(items))
 	for _, item := range items {
 		number, err := strconv.Atoi(item)
-		if err != nil || number < min || number > max {
+		if errutil.CheckError(err) || number < min || number > max {
 			return nil, fmt.Errorf("invalid value %q", item)
 		}
 		numbers = append(numbers, number)

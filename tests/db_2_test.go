@@ -7,6 +7,8 @@ import (
 	"github.com/jmoiron/sqlx"
 	"github.com/stretchr/testify/assert"
 	_ "modernc.org/sqlite"
+
+	"github.com/vlonebara/todo-list/pkg/errutil"
 )
 
 type Task struct {
@@ -28,11 +30,11 @@ func count(db *sqlx.DB) (int, error) {
 func openDB(t *testing.T) *sqlx.DB {
 	t.Helper()
 	db, err := sqlx.Connect("sqlite", DBFile)
-	if err != nil {
+	if errutil.CheckError(err) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() {
-		if err := db.Close(); err != nil {
+		if err := db.Close(); errutil.CheckError(err) {
 			t.Error(err)
 		}
 	})
@@ -43,7 +45,7 @@ func openDB(t *testing.T) *sqlx.DB {
 func getDBTask(t *testing.T, db *sqlx.DB, id any) Task {
 	t.Helper()
 	var task Task
-	if err := db.Get(&task, `SELECT * FROM scheduler WHERE id=?`, id); err != nil {
+	if err := db.Get(&task, `SELECT * FROM scheduler WHERE id=?`, id); errutil.CheckError(err) {
 		t.Fatal(err)
 	}
 	return task

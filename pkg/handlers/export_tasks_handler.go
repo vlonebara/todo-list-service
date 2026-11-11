@@ -1,11 +1,15 @@
 package handlers
 
-import "net/http"
+import (
+	"net/http"
+
+	"github.com/vlonebara/todo-list/pkg/errutil"
+)
 
 // exportTasksHandler возвращает все задачи в загружаемом JSON-файле.
 func (h Handler) exportTasksHandler(w http.ResponseWriter, r *http.Request) {
 	tasks, err := h.tasks.ExportTasks(r.Context())
-	if err != nil {
+	if errutil.CheckError(err) {
 		writeTaskError(w, err)
 		return
 	}

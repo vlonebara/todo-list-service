@@ -7,16 +7,17 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/vlonebara/todo-list/pkg/errutil"
 	"github.com/vlonebara/todo-list/pkg/model"
 )
 
 // AddTask проверяет и сохраняет задачу, возвращая её ID.
 func (s TaskService) AddTask(ctx context.Context, date, title, comment, repeat string) (int64, error) {
-	if err := validateTaskText(title, comment); err != nil {
+	if err := validateTaskText(title, comment); errutil.CheckError(err) {
 		return 0, err
 	}
 	date, err := prepareTaskDate(date, title, repeat, time.Now())
-	if err != nil {
+	if errutil.CheckError(err) {
 		return 0, err
 	}
 
@@ -44,13 +45,13 @@ func prepareTaskDate(date, title, repeat string, now time.Time) (string, error) 
 	if date == "" {
 		date = today
 	}
-	if _, err := ParseDate(date); err != nil {
+	if _, err := ParseDate(date); errutil.CheckError(err) {
 		return "", fmt.Errorf("%w: %v", model.ErrInvalidTask, err)
 	}
 
 	if repeat != "" {
 		nextDate, err := NextDate(now, date, repeat)
-		if err != nil {
+		if errutil.CheckError(err) {
 			return "", fmt.Errorf("%w: invalid repeat rule: %v", model.ErrInvalidTask, err)
 		}
 		if date < today {

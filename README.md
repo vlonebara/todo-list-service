@@ -191,6 +191,7 @@ TODO_DBFILE=./restored.db go run ./cmd
 | [pkg/service](./pkg/service) | Проверка данных, календарные правила и сценарии задач |
 | [pkg/db](./pkg/db) | SQL, транзакции, миграции, история и резервные копии |
 | [pkg/model](./pkg/model) | Независимые модели, фильтры и ошибки |
+| [pkg/errutil](./pkg/errutil) | Общая проверка наличия ошибки через `CheckError` |
 | [pkg/server](./pkg/server) | Запуск, таймауты и graceful shutdown |
 | [web](./web) | Читаемый интерфейс без этапа сборки |
 | [tests](./tests) | Изолированные интеграционные тесты |

@@ -1,8 +1,10 @@
 package handlers
 
 import (
-	"github.com/vlonebara/todo-list/pkg/model"
 	"net/http"
+
+	"github.com/vlonebara/todo-list/pkg/errutil"
+	"github.com/vlonebara/todo-list/pkg/model"
 )
 
 type getTasksListResponse struct {
@@ -12,12 +14,12 @@ type getTasksListResponse struct {
 // getTasksListHandler возвращает ближайшие задачи, отсортированные по дате.
 func (h Handler) getTasksListHandler(w http.ResponseWriter, r *http.Request) {
 	page, err := requestPage(r)
-	if err != nil {
+	if errutil.CheckError(err) {
 		writeTaskError(w, err)
 		return
 	}
 	tasks, err := h.tasks.GetTasksList(r.Context(), r.URL.Query().Get("search"), r.URL.Query().Get("period"), page)
-	if err != nil {
+	if errutil.CheckError(err) {
 		writeTaskError(w, err)
 		return
 	}

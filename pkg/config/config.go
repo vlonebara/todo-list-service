@@ -5,6 +5,8 @@ import (
 	"net"
 	"os"
 	"strconv"
+
+	"github.com/vlonebara/todo-list/pkg/errutil"
 )
 
 // Config содержит настройки, которые читаются один раз при запуске.
@@ -19,7 +21,7 @@ type Config struct {
 
 // Load загружает .env и возвращает готовую конфигурацию приложения.
 func Load() (Config, error) {
-	if err := loadEnvFile(".env"); err != nil {
+	if err := loadEnvFile(".env"); errutil.CheckError(err) {
 		return Config{}, fmt.Errorf("load .env: %w", err)
 	}
 	cfg := Config{
@@ -30,7 +32,7 @@ func Load() (Config, error) {
 		JWTSecret: os.Getenv("TODO_JWT_SECRET"),
 	}
 	port, err := strconv.Atoi(cfg.Port)
-	if err != nil || port < 1 || port > 65535 {
+	if errutil.CheckError(err) || port < 1 || port > 65535 {
 		return Config{}, fmt.Errorf("port must be between 1 and 65535")
 	}
 	local := cfg.Host == "localhost" || net.ParseIP(cfg.Host).IsLoopback()
@@ -38,7 +40,7 @@ func Load() (Config, error) {
 		return Config{}, fmt.Errorf("password is required when listening outside localhost")
 	}
 	cfg.SecureCookies, err = strconv.ParseBool(envOrDefault("TODO_COOKIE_SECURE", strconv.FormatBool(!local)))
-	if err != nil {
+	if errutil.CheckError(err) {
 		return Config{}, fmt.Errorf("cookie secure setting must be true or false")
 	}
 	return cfg, nil

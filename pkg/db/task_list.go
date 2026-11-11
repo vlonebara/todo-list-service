@@ -4,8 +4,10 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"github.com/vlonebara/todo-list/pkg/model"
 	"strings"
+
+	"github.com/vlonebara/todo-list/pkg/errutil"
+	"github.com/vlonebara/todo-list/pkg/model"
 )
 
 const taskFields = `SELECT id, date, title, comment, repeat FROM scheduler`
@@ -20,7 +22,7 @@ func (s TaskStore) List(ctx context.Context, filter model.TaskFilter) ([]model.T
 		skip = 0
 	}
 	rows, err := s.db.QueryContext(ctx, query, args...)
-	if err != nil {
+	if errutil.CheckError(err) {
 		return nil, fmt.Errorf("get tasks: %w", err)
 	}
 	defer rows.Close()
@@ -30,7 +32,7 @@ func (s TaskStore) List(ctx context.Context, filter model.TaskFilter) ([]model.T
 // All возвращает все задачи для выгрузки пользователем.
 func (s TaskStore) All(ctx context.Context) ([]model.Task, error) {
 	rows, err := s.db.QueryContext(ctx, taskFields+` ORDER BY date, id`)
-	if err != nil {
+	if errutil.CheckError(err) {
 		return nil, fmt.Errorf("export tasks: %w", err)
 	}
 	defer rows.Close()
@@ -43,7 +45,7 @@ func readTasks(rows *sql.Rows, search string, skip, limit int) ([]model.Task, er
 	search = strings.ToLower(search)
 	for rows.Next() {
 		task, err := scanTask(rows)
-		if err != nil {
+		if errutil.CheckError(err) {
 			return nil, err
 		}
 		// Встроенный SQLite LIKE не меняет регистр русских букв.

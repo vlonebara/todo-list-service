@@ -5,6 +5,7 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/vlonebara/todo-list/pkg/errutil"
 	"github.com/vlonebara/todo-list/pkg/model"
 )
 
@@ -14,41 +15,41 @@ func TestTaskHistory(t *testing.T) {
 	ctx := t.Context()
 	task := addTestTask(t, store, model.Task{Date: "20300101", Title: "original", Repeat: "d 1"})
 	task.Title = "edited"
-	if err := store.Update(ctx, task); err != nil {
+	if err := store.Update(ctx, task); errutil.CheckError(err) {
 		t.Fatal(err)
 	}
-	if err := store.Complete(ctx, task, "20300102"); err != nil {
+	if err := store.Complete(ctx, task, "20300102"); errutil.CheckError(err) {
 		t.Fatal(err)
 	}
-	if err := store.Delete(ctx, task.ID); err != nil {
+	if err := store.Delete(ctx, task.ID); errutil.CheckError(err) {
 		t.Fatal(err)
 	}
 	changes, err := store.History(ctx, 0)
-	if err != nil || len(changes) != 4 {
+	if errutil.CheckError(err) || len(changes) != 4 {
 		t.Fatalf("unexpected history: %v, %v", changes, err)
 	}
-	if err := store.Undo(ctx); err != nil {
+	if err := store.Undo(ctx); errutil.CheckError(err) {
 		t.Fatal(err)
 	}
 	got, err := store.Get(ctx, task.ID)
-	if err != nil || got.Date != "20300102" {
+	if errutil.CheckError(err) || got.Date != "20300102" {
 		t.Fatalf("delete was not undone: %v, %v", got, err)
 	}
-	if err := store.Undo(ctx); err != nil {
+	if err := store.Undo(ctx); errutil.CheckError(err) {
 		t.Fatal(err)
 	}
 	got, err = store.Get(ctx, task.ID)
-	if err != nil || got != task {
+	if errutil.CheckError(err) || got != task {
 		t.Fatalf("completion was not undone: %v, %v", got, err)
 	}
-	if err := store.Undo(ctx); err != nil {
+	if err := store.Undo(ctx); errutil.CheckError(err) {
 		t.Fatal(err)
 	}
 	got, err = store.Get(ctx, task.ID)
-	if err != nil || got.Title != "original" {
+	if errutil.CheckError(err) || got.Title != "original" {
 		t.Fatalf("edit was not undone: %v, %v", got, err)
 	}
-	if err := store.Undo(ctx); err != nil {
+	if err := store.Undo(ctx); errutil.CheckError(err) {
 		t.Fatal(err)
 	}
 	if _, err := store.Get(ctx, task.ID); !errors.Is(err, model.ErrTaskNotFound) {
@@ -74,7 +75,7 @@ func TestConcurrentCompletion(t *testing.T) {
 	var success, conflicts int
 	for err := range results {
 		switch {
-		case err == nil:
+		case !errutil.CheckError(err):
 			success++
 		case errors.Is(err, model.ErrConflict):
 			conflicts++
@@ -86,7 +87,7 @@ func TestConcurrentCompletion(t *testing.T) {
 		t.Fatalf("success=%d, conflicts=%d", success, conflicts)
 	}
 	changes, err := store.History(t.Context(), 0)
-	if err != nil || len(changes) != 2 {
+	if errutil.CheckError(err) || len(changes) != 2 {
 		t.Fatalf("duplicate completion in history: %v", err)
 	}
 }
@@ -96,16 +97,16 @@ func TestHistoryFailureRollback(t *testing.T) {
 	store := testStore(t)
 	task := addTestTask(t, store, model.Task{Date: "20300101", Title: "original"})
 	_, err := store.db.Exec(`CREATE TRIGGER reject_history BEFORE INSERT ON task_history BEGIN SELECT RAISE(ABORT, 'test failure'); END`)
-	if err != nil {
+	if errutil.CheckError(err) {
 		t.Fatal(err)
 	}
 	changed := task
 	changed.Title = "changed"
-	if err := store.Update(t.Context(), changed); err == nil {
+	if err := store.Update(t.Context(), changed); !errutil.CheckError(err) {
 		t.Fatal("expected history failure")
 	}
 	got, err := store.Get(t.Context(), task.ID)
-	if err != nil || got != task {
+	if errutil.CheckError(err) || got != task {
 		t.Fatalf("failed action changed task: %v, %v", got, err)
 	}
 }
@@ -114,7 +115,7 @@ func TestHistoryFailureRollback(t *testing.T) {
 func TestUndoDeletedTaskConflict(t *testing.T) {
 	store := testStore(t)
 	task := addTestTask(t, store, model.Task{Date: "20300101", Title: "test"})
-	if _, err := store.db.Exec(`DELETE FROM scheduler WHERE id = ?`, task.ID); err != nil {
+	if _, err := store.db.Exec(`DELETE FROM scheduler WHERE id = ?`, task.ID); errutil.CheckError(err) {
 		t.Fatal(err)
 	}
 	if err := store.Undo(t.Context()); !errors.Is(err, model.ErrConflict) {

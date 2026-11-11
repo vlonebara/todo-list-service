@@ -10,6 +10,8 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+
+	"github.com/vlonebara/todo-list/pkg/errutil"
 )
 
 const (
@@ -34,7 +36,7 @@ func NewAuthService(password, secret string) (AuthService, error) {
 		return AuthService{}, nil
 	}
 	key, err := jwtSecret(secret)
-	if err != nil {
+	if errutil.CheckError(err) {
 		return AuthService{}, err
 	}
 	return AuthService{password: password, secret: key}, nil
@@ -66,7 +68,7 @@ func (s AuthService) ValidateToken(token string) bool {
 	parsed, err := jwt.ParseWithClaims(token, &claims, func(_ *jwt.Token) (any, error) {
 		return s.secret, nil
 	}, jwt.WithValidMethods([]string{jwt.SigningMethodHS256.Alg()}), jwt.WithExpirationRequired())
-	if err != nil || !parsed.Valid {
+	if errutil.CheckError(err) || !parsed.Valid {
 		return false
 	}
 	return hmac.Equal([]byte(claims.PasswordHash), []byte(passwordChecksum(s.password, s.secret)))
@@ -81,7 +83,7 @@ func jwtSecret(value string) ([]byte, error) {
 		return []byte(value), nil
 	}
 	secret := make([]byte, jwtSecretSize)
-	if _, err := rand.Read(secret); err != nil {
+	if _, err := rand.Read(secret); errutil.CheckError(err) {
 		return nil, fmt.Errorf("generate jwt secret: %w", err)
 	}
 	return secret, nil
@@ -97,7 +99,7 @@ func createAuthToken(password string, secret []byte, now time.Time) (string, err
 		},
 	}
 	token, err := jwt.NewWithClaims(jwt.SigningMethodHS256, claims).SignedString(secret)
-	if err != nil {
+	if errutil.CheckError(err) {
 		return "", fmt.Errorf("sign jwt: %w", err)
 	}
 	return token, nil

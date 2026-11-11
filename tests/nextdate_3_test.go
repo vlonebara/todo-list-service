@@ -8,6 +8,8 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+
+	"github.com/vlonebara/todo-list/pkg/errutil"
 )
 
 type nextDate struct {
@@ -45,7 +47,7 @@ func TestNextDate(t *testing.T) {
 			assert.NoError(t, err)
 			next := strings.TrimSpace(string(get))
 			_, err = time.Parse("20060102", next)
-			if err != nil && len(v.want) == 0 {
+			if errutil.CheckError(err) && len(v.want) == 0 {
 				continue
 			}
 			assert.Equal(t, v.want, next, `{%q, %q, %q}`,

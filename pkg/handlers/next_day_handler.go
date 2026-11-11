@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/vlonebara/todo-list/pkg/errutil"
 	"github.com/vlonebara/todo-list/pkg/service"
 )
 
@@ -13,7 +14,7 @@ func nextDayHandler(w http.ResponseWriter, r *http.Request) {
 	now := time.Now()
 	if value := r.FormValue("now"); value != "" {
 		parsed, err := service.ParseDate(value)
-		if err != nil {
+		if errutil.CheckError(err) {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
@@ -21,11 +22,11 @@ func nextDayHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	date, err := service.NextDate(now, r.FormValue("date"), r.FormValue("repeat"))
-	if err != nil {
+	if errutil.CheckError(err) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	if _, err := w.Write([]byte(date)); err != nil {
+	if _, err := w.Write([]byte(date)); errutil.CheckError(err) {
 		log.Printf("write next date: %v", err)
 	}
 }

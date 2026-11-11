@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/vlonebara/todo-list/pkg/errutil"
 	"github.com/vlonebara/todo-list/pkg/model"
 )
 
@@ -20,12 +21,12 @@ type historyData struct {
 // getHistoryHandler возвращает историю создания, изменения и выполнения задач.
 func (h Handler) getHistoryHandler(w http.ResponseWriter, r *http.Request) {
 	page, err := requestPage(r)
-	if err != nil {
+	if errutil.CheckError(err) {
 		writeTaskError(w, err)
 		return
 	}
 	changes, err := h.tasks.GetHistory(r.Context(), page)
-	if err != nil {
+	if errutil.CheckError(err) {
 		writeTaskError(w, err)
 		return
 	}
@@ -52,7 +53,7 @@ func requestPage(r *http.Request) (int, error) {
 		return 1, nil
 	}
 	page, err := strconv.Atoi(value)
-	if err != nil || page < 1 || page > 1000000 {
+	if errutil.CheckError(err) || page < 1 || page > 1000000 {
 		return 0, fmt.Errorf("%w: page must be between 1 and 1000000", model.ErrInvalidTask)
 	}
 	return page, nil

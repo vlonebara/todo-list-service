@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/vlonebara/todo-list/pkg/errutil"
 	"github.com/vlonebara/todo-list/pkg/model"
 )
 
@@ -20,7 +21,7 @@ func testStore(t *testing.T) TaskStore {
 func addTestTask(t *testing.T, store TaskStore, task model.Task) model.Task {
 	t.Helper()
 	id, err := store.Add(t.Context(), task)
-	if err != nil {
+	if errutil.CheckError(err) {
 		t.Fatal(err)
 	}
 	task.ID = id
@@ -37,7 +38,7 @@ func TestTaskStoreCanceledRequest(t *testing.T) {
 		t.Fatalf("expected canceled operation, got %v", err)
 	}
 	tasks, err := store.List(t.Context(), model.TaskFilter{})
-	if err != nil || len(tasks) != 0 {
+	if errutil.CheckError(err) || len(tasks) != 0 {
 		t.Fatalf("canceled request changed tasks: %v, %v", tasks, err)
 	}
 }

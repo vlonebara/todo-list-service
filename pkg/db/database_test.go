@@ -5,17 +5,19 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/vlonebara/todo-list/pkg/errutil"
 )
 
 // openTestDatabase открывает тестовую БД и закрывает её после проверки.
 func openTestDatabase(t *testing.T, file string) *sql.DB {
 	t.Helper()
 	database, err := OpenDatabase(file)
-	if err != nil {
+	if errutil.CheckError(err) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() {
-		if err := database.Close(); err != nil {
+		if err := database.Close(); errutil.CheckError(err) {
 			t.Error(err)
 		}
 	})
@@ -27,7 +29,7 @@ func TestDatabaseFilePermissions(t *testing.T) {
 	file := filepath.Join(t.TempDir(), "test.db")
 	openTestDatabase(t, file)
 	info, err := os.Stat(file)
-	if err != nil {
+	if errutil.CheckError(err) {
 		t.Fatal(err)
 	}
 	if info.Mode().Perm() != 0600 {

@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/vlonebara/todo-list/pkg/errutil"
 	"github.com/vlonebara/todo-list/pkg/model"
 )
 
@@ -15,7 +16,7 @@ type apiErrorResponse struct {
 
 // writeTaskResult возвращает пустой JSON после изменения задачи или описывает ошибку.
 func writeTaskResult(w http.ResponseWriter, err error) {
-	if err != nil {
+	if errutil.CheckError(err) {
 		writeTaskError(w, err)
 		return
 	}
@@ -48,7 +49,7 @@ func writeAPIError(w http.ResponseWriter, status int, message string) {
 func writeJSON(w http.ResponseWriter, status int, value any) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(status)
-	if err := json.NewEncoder(w).Encode(value); err != nil {
+	if err := json.NewEncoder(w).Encode(value); errutil.CheckError(err) {
 		log.Printf("write response: %v", err)
 	}
 }

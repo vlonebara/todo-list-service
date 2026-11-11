@@ -6,6 +6,7 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/vlonebara/todo-list/pkg/errutil"
 	"github.com/vlonebara/todo-list/pkg/model"
 )
 
@@ -17,7 +18,7 @@ func (s TaskService) GetTasksList(ctx context.Context, search, period string, pa
 		return nil, fmt.Errorf("%w: search must not exceed 256 characters", model.ErrInvalidTask)
 	}
 	offset, err := pageOffset(page)
-	if err != nil {
+	if errutil.CheckError(err) {
 		return nil, err
 	}
 	filter := taskFilter(search)
@@ -41,7 +42,7 @@ func (s TaskService) GetTasksList(ctx context.Context, search, period string, pa
 // taskFilter распознаёт дату поиска и приводит её к формату задачи.
 func taskFilter(search string) model.TaskFilter {
 	date, err := time.Parse(searchDateLayout, search)
-	if err == nil && date.Format(searchDateLayout) == search {
+	if !errutil.CheckError(err) && date.Format(searchDateLayout) == search {
 		return model.TaskFilter{Date: date.Format(dateLayout)}
 	}
 	return model.TaskFilter{Text: search}

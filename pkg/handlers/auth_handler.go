@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/vlonebara/todo-list/pkg/errutil"
 	"github.com/vlonebara/todo-list/pkg/service"
 )
 
@@ -23,7 +24,7 @@ func (h Handler) authHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	token, err := h.authentication.Authenticate(request.Password)
-	if err != nil {
+	if errutil.CheckError(err) {
 		writeAPIError(w, http.StatusUnauthorized, err.Error())
 		return
 	}

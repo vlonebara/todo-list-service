@@ -6,13 +6,14 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/vlonebara/todo-list/pkg/errutil"
 	"github.com/vlonebara/todo-list/pkg/model"
 )
 
 // Undo восстанавливает состояние перед последним неотменённым действием.
 func (s TaskStore) Undo(ctx context.Context) error {
 	tx, err := s.db.BeginTx(ctx, nil)
-	if err != nil {
+	if errutil.CheckError(err) {
 		return fmt.Errorf("begin undo: %w", err)
 	}
 	defer tx.Rollback()
@@ -24,13 +25,13 @@ func (s TaskStore) Undo(ctx context.Context) error {
 	if errors.Is(err, sql.ErrNoRows) {
 		return model.ErrHistoryEmpty
 	}
-	if err != nil {
+	if errutil.CheckError(err) {
 		return fmt.Errorf("get last action: %w", err)
 	}
-	if err := decodeChange(&change, before, after); err != nil {
+	if err := decodeChange(&change, before, after); errutil.CheckError(err) {
 		return err
 	}
-	if err := checkUndoState(ctx, tx, change); err != nil {
+	if err := checkUndoState(ctx, tx, change); errutil.CheckError(err) {
 		return err
 	}
 	if change.Before == nil {
@@ -43,10 +44,10 @@ func (s TaskStore) Undo(ctx context.Context) error {
 			 comment = excluded.comment, repeat = excluded.repeat`,
 			task.ID, task.Date, task.Title, task.Comment, task.Repeat)
 	}
-	if err != nil {
+	if errutil.CheckError(err) {
 		return fmt.Errorf("restore task: %w", err)
 	}
-	if _, err := tx.ExecContext(ctx, `UPDATE task_history SET undone = 1 WHERE id = ?`, change.ID); err != nil {
+	if _, err := tx.ExecContext(ctx, `UPDATE task_history SET undone = 1 WHERE id = ?`, change.ID); errutil.CheckError(err) {
 		return fmt.Errorf("mark action undone: %w", err)
 	}
 	return tx.Commit()
@@ -69,12 +70,12 @@ func checkUndoState(ctx context.Context, tx *sql.Tx, change model.TaskChange) er
 		if errors.Is(err, model.ErrTaskNotFound) {
 			return nil
 		}
-		if err != nil {
+		if errutil.CheckError(err) {
 			return err
 		}
 		return model.ErrConflict
 	}
-	if err != nil {
+	if errutil.CheckError(err) {
 		if errors.Is(err, model.ErrTaskNotFound) {
 			return model.ErrConflict
 		}

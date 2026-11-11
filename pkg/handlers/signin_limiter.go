@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"sync"
 	"time"
+
+	"github.com/vlonebara/todo-list/pkg/errutil"
 )
 
 type signinAttempts struct {
@@ -23,7 +25,7 @@ func limitSignin(next http.HandlerFunc) http.HandlerFunc {
 	limiter := signinLimiter{clients: make(map[string]signinAttempts)}
 	return func(w http.ResponseWriter, r *http.Request) {
 		address, _, err := net.SplitHostPort(r.RemoteAddr)
-		if err != nil {
+		if errutil.CheckError(err) {
 			address = r.RemoteAddr
 		}
 		if !limiter.allow(address, time.Now()) {

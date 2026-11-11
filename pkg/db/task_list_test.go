@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/vlonebara/todo-list/pkg/errutil"
 	"github.com/vlonebara/todo-list/pkg/model"
 )
 
@@ -30,13 +31,13 @@ func TestTaskList(t *testing.T) {
 	for _, item := range cases {
 		t.Run(item.name, func(t *testing.T) {
 			tasks, err := store.List(t.Context(), model.TaskFilter{Text: item.search, Offset: item.offset})
-			if err != nil || len(tasks) != item.want {
+			if errutil.CheckError(err) || len(tasks) != item.want {
 				t.Fatalf("got %d tasks, %v; want %d", len(tasks), err, item.want)
 			}
 		})
 	}
 	all, err := store.All(t.Context())
-	if err != nil || len(all) != 20 {
+	if errutil.CheckError(err) || len(all) != 20 {
 		t.Fatalf("incomplete export: %d tasks, %v", len(all), err)
 	}
 }
@@ -59,7 +60,7 @@ func TestTaskDateFilters(t *testing.T) {
 	} {
 		t.Run(item.name, func(t *testing.T) {
 			tasks, err := store.List(t.Context(), item.filter)
-			if err != nil || len(tasks) != item.want {
+			if errutil.CheckError(err) || len(tasks) != item.want {
 				t.Fatalf("unexpected selection: %v, %v", tasks, err)
 			}
 		})

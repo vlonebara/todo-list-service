@@ -3,6 +3,8 @@ package service
 import (
 	"fmt"
 	"time"
+
+	"github.com/vlonebara/todo-list/pkg/errutil"
 )
 
 const dateLayout = "20060102"
@@ -13,7 +15,7 @@ func ParseDate(value string) (time.Time, error) {
 		return time.Time{}, fmt.Errorf("date must use YYYYMMDD format")
 	}
 	date, err := time.Parse(dateLayout, value)
-	if err != nil {
+	if errutil.CheckError(err) {
 		return time.Time{}, fmt.Errorf("invalid date: %w", err)
 	}
 	if date.Year() < 1 {

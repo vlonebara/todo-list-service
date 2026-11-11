@@ -1,6 +1,10 @@
 package config
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/vlonebara/todo-list/pkg/errutil"
+)
 
 // TestLoad проверяет локальный запуск и обязательный пароль для внешней сети.
 func TestLoad(t *testing.T) {
@@ -20,7 +24,7 @@ func TestLoad(t *testing.T) {
 			t.Setenv("TODO_PORT", item.port)
 			t.Setenv("TODO_COOKIE_SECURE", "")
 			cfg, err := Load()
-			if (err == nil) != item.valid {
+			if (!errutil.CheckError(err)) != item.valid {
 				t.Fatalf("unexpected result: %v", err)
 			}
 			if item.valid && cfg.SecureCookies != item.secure {

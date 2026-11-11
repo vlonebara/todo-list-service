@@ -10,6 +10,7 @@ import (
 
 	"github.com/vlonebara/todo-list/pkg/config"
 	"github.com/vlonebara/todo-list/pkg/db"
+	"github.com/vlonebara/todo-list/pkg/errutil"
 	"github.com/vlonebara/todo-list/pkg/handlers"
 	"github.com/vlonebara/todo-list/pkg/server"
 	"github.com/vlonebara/todo-list/pkg/service"
@@ -21,17 +22,17 @@ func main() {
 	restore := flag.String("restore", "", "restore a backup into TODO_DBFILE (must not exist)")
 	flag.Parse()
 	cfg, err := config.Load()
-	if err != nil {
+	if errutil.CheckError(err) {
 		log.Fatal(err)
 	}
 	if *backup != "" || *restore != "" {
-		if err := databaseCommand(cfg, *backup, *restore); err != nil {
+		if err := databaseCommand(cfg, *backup, *restore); errutil.CheckError(err) {
 			log.Fatal(err)
 		}
 		return
 	}
 
-	if err := run(cfg); err != nil {
+	if err := run(cfg); errutil.CheckError(err) {
 		log.Fatal(err)
 	}
 }
@@ -47,7 +48,7 @@ func databaseCommand(cfg config.Config, backup, restore string) error {
 		return db.Restore(ctx, restore, cfg.DBFile)
 	}
 	database, err := db.OpenDatabase(cfg.DBFile)
-	if err != nil {
+	if errutil.CheckError(err) {
 		return err
 	}
 	defer database.Close()
@@ -57,15 +58,15 @@ func databaseCommand(cfg config.Config, backup, restore string) error {
 // run собирает зависимости приложения и закрывает БД после остановки сервера.
 func run(cfg config.Config) error {
 	authentication, err := service.NewAuthService(cfg.Password, cfg.JWTSecret)
-	if err != nil {
+	if errutil.CheckError(err) {
 		return err
 	}
 	database, err := db.OpenDatabase(cfg.DBFile)
-	if err != nil {
+	if errutil.CheckError(err) {
 		return err
 	}
 	defer func() {
-		if err := database.Close(); err != nil {
+		if err := database.Close(); errutil.CheckError(err) {
 			log.Printf("close database: %v", err)
 		}
 	}()

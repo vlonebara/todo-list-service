@@ -7,6 +7,8 @@ import (
 	"os"
 	"strconv"
 	"strings"
+
+	"github.com/vlonebara/todo-list/pkg/errutil"
 )
 
 // loadEnvFile загружает переменные из файла, не заменяя значения окружения.
@@ -15,7 +17,7 @@ func loadEnvFile(file string) error {
 	if errors.Is(err, os.ErrNotExist) {
 		return nil
 	}
-	if err != nil {
+	if errutil.CheckError(err) {
 		return err
 	}
 	defer input.Close()
@@ -35,7 +37,7 @@ func loadEnvFile(file string) error {
 		}
 		if strings.HasPrefix(value, `"`) {
 			value, err = strconv.Unquote(value)
-			if err != nil {
+			if errutil.CheckError(err) {
 				return fmt.Errorf("invalid value on .env line %d", lineNumber)
 			}
 		} else if len(value) >= 2 && strings.HasPrefix(value, "'") && strings.HasSuffix(value, "'") {
@@ -44,7 +46,7 @@ func loadEnvFile(file string) error {
 		if _, exists := os.LookupEnv(key); exists {
 			continue
 		}
-		if err := os.Setenv(key, value); err != nil {
+		if err := os.Setenv(key, value); errutil.CheckError(err) {
 			return fmt.Errorf("set environment variable %s: %w", key, err)
 		}
 	}

@@ -4,13 +4,14 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/vlonebara/todo-list/pkg/errutil"
 	"github.com/vlonebara/todo-list/pkg/model"
 )
 
 // GetHistory возвращает страницу последних действий пользователя.
 func (s TaskService) GetHistory(ctx context.Context, page int) ([]model.TaskChange, error) {
 	offset, err := pageOffset(page)
-	if err != nil {
+	if errutil.CheckError(err) {
 		return nil, err
 	}
 	return s.store.History(ctx, offset)

@@ -5,6 +5,8 @@ import (
 	"io"
 	"strings"
 	"testing"
+
+	"github.com/vlonebara/todo-list/pkg/errutil"
 )
 
 // TestAPIStatusCodes проверяет ошибки API по HTTP-кодам и JSON.
@@ -28,18 +30,18 @@ func TestAPIStatusCodes(t *testing.T) {
 				token = Token
 			}
 			response, err := sendRequest(item.method, item.path, strings.NewReader(item.body), token)
-			if err != nil {
+			if errutil.CheckError(err) {
 				t.Fatal(err)
 			}
 			defer response.Body.Close()
 			body, err := io.ReadAll(response.Body)
-			if err != nil {
+			if errutil.CheckError(err) {
 				t.Fatal(err)
 			}
 			var result struct {
 				Error string `json:"error"`
 			}
-			if err := json.Unmarshal(body, &result); err != nil {
+			if err := json.Unmarshal(body, &result); errutil.CheckError(err) {
 				t.Fatal(err)
 			}
 			if response.StatusCode != item.status || result.Error == "" {

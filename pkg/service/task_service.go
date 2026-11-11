@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/vlonebara/todo-list/pkg/errutil"
 	"github.com/vlonebara/todo-list/pkg/model"
 )
 
@@ -35,7 +36,7 @@ func NewTaskService(store TaskStore) TaskService {
 // parseTaskID проверяет и преобразует ID задачи в число.
 func parseTaskID(id string) (int64, error) {
 	taskID, err := strconv.ParseInt(id, 10, 64)
-	if err != nil || taskID < 1 {
+	if errutil.CheckError(err) || taskID < 1 {
 		return 0, fmt.Errorf("%w: invalid task id", model.ErrInvalidTask)
 	}
 	return taskID, nil
