@@ -32,15 +32,8 @@ func (h Handler) getHistoryHandler(w http.ResponseWriter, r *http.Request) {
 	items := make([]historyData, 0, len(changes))
 	for _, change := range changes {
 		item := historyData{ID: strconv.FormatInt(change.ID, 10), Action: change.Action,
-			CreatedAt: change.CreatedAt, Undone: change.Undone}
-		if change.Before != nil {
-			task := taskToResponse(*change.Before)
-			item.Before = &task
-		}
-		if change.After != nil {
-			task := taskToResponse(*change.After)
-			item.After = &task
-		}
+			CreatedAt: change.CreatedAt, Undone: change.Undone,
+			Before: taskSnapshot(change.Before), After: taskSnapshot(change.After)}
 		items = append(items, item)
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"history": items})
@@ -48,11 +41,8 @@ func (h Handler) getHistoryHandler(w http.ResponseWriter, r *http.Request) {
 
 // undoTaskHandler отменяет последнее действие над задачами.
 func (h Handler) undoTaskHandler(w http.ResponseWriter, r *http.Request) {
-	if err := h.tasks.UndoLast(r.Context()); err != nil {
-		writeTaskError(w, err)
-		return
-	}
-	writeJSON(w, http.StatusOK, struct{}{})
+	err := h.tasks.UndoLast(r.Context())
+	writeTaskResult(w, err)
 }
 
 // requestPage читает номер страницы и использует первую страницу по умолчанию.

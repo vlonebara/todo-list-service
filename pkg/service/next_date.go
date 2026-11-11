@@ -103,10 +103,7 @@ func nextByWeekdays(start, now time.Time, rule []string) (time.Time, error) {
 		weekdays[day] = true
 	}
 
-	date := start
-	if !afterNow(date.AddDate(0, 0, 1), now) {
-		date = dateOnly(now)
-	}
+	date := repeatSearchStart(start, now)
 	for {
 		date = date.AddDate(0, 0, 1)
 		if weekdays[weekdayNumber(date)] {
@@ -158,10 +155,7 @@ func nextByMonths(start, now time.Time, rule []string) (time.Time, error) {
 		return time.Time{}, fmt.Errorf("month rule has no possible date")
 	}
 
-	date := start
-	if !afterNow(date.AddDate(0, 0, 1), now) {
-		date = dateOnly(now)
-	}
+	date := repeatSearchStart(start, now)
 	for {
 		date = date.AddDate(0, 0, 1)
 		if !months[int(date.Month())] {
@@ -173,6 +167,14 @@ func nextByMonths(start, now time.Time, rule []string) (time.Time, error) {
 			return date, nil
 		}
 	}
+}
+
+// repeatSearchStart пропускает прошедшие дни перед поиском календарного повторения.
+func repeatSearchStart(start, now time.Time) time.Time {
+	if !afterNow(start.AddDate(0, 0, 1), now) {
+		return dateOnly(now)
+	}
+	return start
 }
 
 // monthRuleHasDate проверяет, что правило может совпасть с календарной датой.

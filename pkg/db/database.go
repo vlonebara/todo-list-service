@@ -21,19 +21,22 @@ func OpenDatabase(file string) (*sql.DB, error) {
 	database.SetMaxOpenConns(1)
 	database.SetMaxIdleConns(1)
 
-	if err := database.Ping(); err != nil {
-		_ = database.Close()
-		return nil, fmt.Errorf("connect database: %w", err)
-	}
-	if _, err := database.Exec(`PRAGMA busy_timeout = 5000`); err != nil {
-		_ = database.Close()
-		return nil, fmt.Errorf("configure database: %w", err)
-	}
-	if err := Create(database); err != nil {
+	if err := configureDatabase(database); err != nil {
 		_ = database.Close()
 		return nil, err
 	}
 	return database, nil
+}
+
+// configureDatabase проверяет соединение и подготавливает настройки и схему.
+func configureDatabase(database *sql.DB) error {
+	if err := database.Ping(); err != nil {
+		return fmt.Errorf("connect database: %w", err)
+	}
+	if _, err := database.Exec(`PRAGMA busy_timeout = 5000`); err != nil {
+		return fmt.Errorf("configure database: %w", err)
+	}
+	return Create(database)
 }
 
 // prepareDatabaseFile создаёт новый файл с доступом только для владельца.

@@ -47,7 +47,7 @@ func Restore(ctx context.Context, source, destination string) error {
 
 // validateBackup проверяет, что копия содержит таблицу задач приложения.
 func validateBackup(ctx context.Context, database *sql.DB) error {
-	rows, err := database.QueryContext(ctx, `SELECT id, date, title, comment, repeat FROM scheduler LIMIT 0`)
+	rows, err := database.QueryContext(ctx, taskFields+` LIMIT 0`)
 	if err != nil {
 		return fmt.Errorf("backup does not contain the task schema: %w", err)
 	}

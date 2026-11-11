@@ -70,7 +70,7 @@ func (s TaskStore) Delete(ctx context.Context, id int64) error {
 		return err
 	}
 	defer tx.Rollback()
-	if _, err := tx.ExecContext(ctx, `DELETE FROM scheduler WHERE id = ?`, id); err != nil {
+	if err := deleteTask(ctx, tx, id); err != nil {
 		return fmt.Errorf("delete task: %w", err)
 	}
 	return finishChange(ctx, tx, "delete", before, nil)
@@ -91,7 +91,7 @@ func (s TaskStore) Complete(ctx context.Context, original model.Task, date strin
 	}
 	var after *model.Task
 	if date == "" {
-		_, err = tx.ExecContext(ctx, `DELETE FROM scheduler WHERE id = ?`, original.ID)
+		err = deleteTask(ctx, tx, original.ID)
 	} else {
 		_, err = tx.ExecContext(ctx, `UPDATE scheduler SET date = ? WHERE id = ?`, date, original.ID)
 		original.Date = date
@@ -101,4 +101,10 @@ func (s TaskStore) Complete(ctx context.Context, original model.Task, date strin
 		return fmt.Errorf("complete task: %w", err)
 	}
 	return finishChange(ctx, tx, "complete", before, after)
+}
+
+// deleteTask удаляет строку внутри уже открытой транзакции изменения задачи.
+func deleteTask(ctx context.Context, tx *sql.Tx, id int64) error {
+	_, err := tx.ExecContext(ctx, `DELETE FROM scheduler WHERE id = ?`, id)
+	return err
 }

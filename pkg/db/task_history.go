@@ -11,10 +11,15 @@ import (
 	"github.com/vlonebara/todo-list/pkg/model"
 )
 
-const taskByID = `SELECT id, date, title, comment, repeat FROM scheduler WHERE id = ?`
+const taskByID = taskFields + ` WHERE id = ?`
+
+// rowScanner позволяет читать задачу из одной строки или результата выборки.
+type rowScanner interface {
+	Scan(dest ...any) error
+}
 
 // scanTask читает одну задачу и распознаёт отсутствие записи.
-func scanTask(row *sql.Row) (model.Task, error) {
+func scanTask(row rowScanner) (model.Task, error) {
 	var task model.Task
 	err := row.Scan(&task.ID, &task.Date, &task.Title, &task.Comment, &task.Repeat)
 	if errors.Is(err, sql.ErrNoRows) {

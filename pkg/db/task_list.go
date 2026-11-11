@@ -42,9 +42,9 @@ func readTasks(rows *sql.Rows, search string, skip, limit int) ([]model.Task, er
 	tasks := make([]model.Task, 0, model.PageSize)
 	search = strings.ToLower(search)
 	for rows.Next() {
-		var task model.Task
-		if err := rows.Scan(&task.ID, &task.Date, &task.Title, &task.Comment, &task.Repeat); err != nil {
-			return nil, fmt.Errorf("read task: %w", err)
+		task, err := scanTask(rows)
+		if err != nil {
+			return nil, err
 		}
 		// Встроенный SQLite LIKE не меняет регистр русских букв.
 		if search != "" && !strings.Contains(strings.ToLower(task.Title), search) && !strings.Contains(strings.ToLower(task.Comment), search) {

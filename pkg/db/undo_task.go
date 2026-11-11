@@ -34,7 +34,7 @@ func (s TaskStore) Undo(ctx context.Context) error {
 		return err
 	}
 	if change.Before == nil {
-		_, err = tx.ExecContext(ctx, `DELETE FROM scheduler WHERE id = ?`, change.After.ID)
+		err = deleteTask(ctx, tx, change.After.ID)
 	} else {
 		task := change.Before
 		_, err = tx.ExecContext(ctx,

@@ -8,12 +8,7 @@ import (
 
 // EditTaskStatus помечает задачу выполненной и переносит её или удаляет.
 func (s TaskService) EditTaskStatus(ctx context.Context, id string) error {
-	taskID, err := parseTaskID(id)
-	if err != nil {
-		return err
-	}
-
-	task, err := s.store.Get(ctx, taskID)
+	task, err := s.GetTask(ctx, id)
 	if err != nil {
 		return err
 	}

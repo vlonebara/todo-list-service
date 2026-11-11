@@ -13,6 +13,15 @@ type apiErrorResponse struct {
 	Error string `json:"error"`
 }
 
+// writeTaskResult возвращает пустой JSON после изменения задачи или описывает ошибку.
+func writeTaskResult(w http.ResponseWriter, err error) {
+	if err != nil {
+		writeTaskError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, struct{}{})
+}
+
 // writeTaskError выбирает HTTP-код и скрывает внутренние ошибки сервера.
 func writeTaskError(w http.ResponseWriter, err error) {
 	switch {

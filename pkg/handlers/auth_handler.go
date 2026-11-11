@@ -13,7 +13,6 @@ type authRequest struct {
 
 type authResponse struct {
 	Token string `json:"token,omitempty"`
-	Error string `json:"error,omitempty"`
 }
 
 // authHandler проверяет пароль и возвращает JWT-токен.
@@ -25,7 +24,7 @@ func (h Handler) authHandler(w http.ResponseWriter, r *http.Request) {
 
 	token, err := h.authentication.Authenticate(request.Password)
 	if err != nil {
-		writeJSON(w, http.StatusUnauthorized, authResponse{Error: err.Error()})
+		writeAPIError(w, http.StatusUnauthorized, err.Error())
 		return
 	}
 	http.SetCookie(w, h.tokenCookie(token, int(service.TokenLifetime.Seconds())))
@@ -41,10 +40,7 @@ func (h Handler) signoutHandler(w http.ResponseWriter, r *http.Request) {
 // sessionHandler сообщает интерфейсу, нужен ли вход и действительна ли cookie.
 func (h Handler) sessionHandler(w http.ResponseWriter, r *http.Request) {
 	required := h.authentication.Enabled()
-	authenticated := !required
-	if cookie, err := r.Cookie("token"); err == nil && required {
-		authenticated = h.authentication.ValidateToken(cookie.Value)
-	}
+	authenticated := !required || validTokenCookie(r, h.authentication)
 	writeJSON(w, http.StatusOK, map[string]bool{"required": required, "authenticated": authenticated})
 }
 
