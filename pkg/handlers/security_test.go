@@ -16,14 +16,10 @@ import (
 func testHandler(t *testing.T, password string) http.Handler {
 	t.Helper()
 	database, err := db.OpenDatabase(filepath.Join(t.TempDir(), "test.db"))
-	if err != nil {
-		t.Fatal(err)
-	}
+	checkError(t, err)
 	t.Cleanup(func() { _ = database.Close() })
 	authentication, err := service.NewAuthService(password, "")
-	if err != nil {
-		t.Fatal(err)
-	}
+	checkError(t, err)
 	return New(service.NewTaskService(db.NewTaskStore(database)), authentication, true, "../../web")
 }
 
